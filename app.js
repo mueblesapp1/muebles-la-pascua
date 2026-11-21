@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=20';
+import { store, today, daysAgo } from './store.js?v=21';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -8,7 +8,7 @@ const db = () => store.db;
 const rol = () => db().usuario?.rol;
 const esJefe = () => ['dueno', 'admin'].includes(rol());
 const MODS = [['tablero', 'Tablero'], ['vender', 'Vender'], ['ventas', 'Ventas'], ['despacho', 'Por despachar'], ['inventario', 'Inventario'], ['cashea', 'Por cobrar'], ['caja', 'Caja'], ['clientes', 'Clientes'], ['reportes', 'Reportes']];
-const modsDef = r => r === 'admin' ? MODS.map(m => m[0]) : r === 'cajero' ? ['vender', 'ventas', 'despacho', 'cashea', 'caja', 'clientes'] : ['vender', 'ventas', 'despacho', 'clientes'];
+const modsDef = r => r === 'almacen' ? ['despacho', 'inventario'] : r === 'admin' ? MODS.map(m => m[0]) : r === 'cajero' ? ['vender', 'ventas', 'despacho', 'cashea', 'caja', 'clientes'] : ['vender', 'ventas', 'despacho', 'clientes'];
 const puede = k => k === 'ajustes' || rol() === 'dueno' || (db().usuario?.modulos || modsDef(rol())).includes(k);
 
 // ---------- formato ----------
@@ -546,7 +546,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=20'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=21'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -557,7 +557,7 @@ const App = window.App = {
     <div class="fld"><label>Nombre</label><input class="in" id="uN" value="${esc(u.nombre || '')}"></div>
     ${id ? '' : '<div class="fld"><label>Correo</label><input class="in" id="uE" type="email" autocomplete="off" placeholder="empleado@gmail.com"></div>'}
     <div class="fld"><label>${id ? 'Nueva contraseña (déjala vacía para no cambiarla)' : 'Contraseña (mínimo 6)'}</label><input class="in" id="uP" type="text" autocomplete="new-password"></div>
-    <div class="fld"><label>Perfil</label><div class="seg" id="uR">${[['vendedor', 'Vendedor'], ['cajero', 'Cajero'], ['admin', 'Administrador']].map(([k, l]) => `<button data-v="${k}" class="${u.rol === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+    <div class="fld"><label>Perfil</label><div class="seg" id="uR">${[['vendedor', 'Vendedor'], ['cajero', 'Cajero'], ['almacen', 'Almacén'], ['admin', 'Administrador']].map(([k, l]) => `<button data-v="${k}" class="${u.rol === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <div class="fld"><label>Módulos a los que puede entrar</label><div class="tkchk" id="uM">${MODS.map(([k, l]) => `<label><input type="checkbox" value="${k}" ${mods.includes(k) ? 'checked' : ''}> ${l}</label>`).join('')}</div><small style="color:var(--mut)">Ajustes siempre aparece para cerrar sesión. Los permisos de borrar, anular y configurar son solo de Administrador.</small></div>
     ${id ? `<label style="display:flex;gap:8px;align-items:center;margin-bottom:14px"><input type="checkbox" id="uA" ${u.activo ? 'checked' : ''}> Usuario activo (desmárcalo para bloquear la entrada)</label>` : ''}
     <button class="btn pri block" id="uOk">${id ? 'Guardar cambios' : 'Crear usuario'}</button>`);
