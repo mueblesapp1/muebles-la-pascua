@@ -166,3 +166,4 @@ select.in option{background:#0C1322}
 .emo{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:10px;margin:-4px 0 14px}
 .emo[hidden]{display:none}.emo>button{font-size:24px;background:none;border:0;padding:6px 0;border-radius:8px;cursor:pointer}.emo>button:active{background:rgba(245,165,36,.25)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 12px;font-size:13px}.chip button{background:rgba(255,107,107,.15);color:#ff6b6b;border:0;border-radius:50%;width:22px;height:22px;cursor:pointer}
+.emo{max-height:260px;overflow-y:auto}.emo-otro{grid-column:1/-1;display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px}
