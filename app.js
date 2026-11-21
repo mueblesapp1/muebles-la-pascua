@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=10';
+import { store, today, daysAgo } from './store.js?v=11';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -180,7 +180,7 @@ function sheet(html) { const o = document.createElement('div'); o.className = 'o
 const closeSheet = () => document.querySelector('.ov')?.remove();
 
 const CATS = extra => [...new Set([...(db().config.categorias || []), ...(extra ? [extra] : [])])];
-const EMOJIS = ['🛋️', '🪑', '🛏️', '🚪', '🗄️', '🪞', '🖼️', '🛁', '🚿', '🚽', '🧺', '💡', '🕯️', '🪴', '📺', '🖥️', '💻', '📱', '🎧', '🔊', '📷', '🎮', '⌚', '🖨️', '❄️', '🧊', '🌀', '🔥', '🍳', '☕', '🥤', '🍞', '🧹', '🧼', '👕', '🔌', '🔋', '🛠️', '⚙️', '🏍️', '🚲', '🛞', '👶', '🧸', '⚽', '📦', '🎁', '⭐'];
+const EMOJIS = ['🛋️', '🪑', '🛏️', '🚪', '🗄️', '🪞', '🖼️', '🪟', '🛁', '🚿', '🚽', '🧺', '🧻', '💡', '🕯️', '🪔', '🪴', '🏠', '📺', '🖥️', '💻', '⌨️', '🖱️', '📱', '☎️', '📞', '🎧', '🔊', '📻', '🎤', '📷', '📹', '🎮', '🕹️', '⌚', '⏰', '🖨️', '💾', '❄️', '🧊', '🌀', '🌬️', '🔥', '♨️', '🍳', '🥘', '🍲', '☕', '🫖', '🥤', '🍹', '🍞', '🥪', '🍕', '🧁', '🔪', '🍴', '🥄', '🧹', '🧼', '🧽', '🪣', '👕', '👖', '👗', '👟', '🧵', '🪡', '🔌', '🔋', '💡', '🔦', '🛠️', '🔧', '🔨', '🪛', '⚙️', '🧰', '🏍️', '🛵', '🚲', '🛴', '🛞', '🚗', '👶', '🍼', '🧸', '🎈', '⚽', '🏀', '🏋️', '🎸', '🎹', '💄', '💈', '🪒', '🧴', '💍', '👜', '🎒', '🧳', '☂️', '🏷️', '💳', '📦', '🎁', '⭐', '✅'].filter((e, i, s) => s.indexOf(e) === i);
 // ---------- ticket como imagen ----------
 const TK = () => ({ nombre: 'Muebles La Pascua', rif: '', direccion: 'Valle de la Pascua, Guárico', telefono: '', instagram: '', pie: '¡Gracias por su compra!', logo: true, bs: true, cliente: true, pagos: true, garantia: true, vendedor: true, ...(db().config.ticket || {}) });
 let _logo; const logoImg = () => _logo ||= new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = 'logo.png'; });
@@ -319,7 +319,7 @@ const App = window.App = {
     const p = db().productos.find(p => p.id === id) || { nombre: '', categoria: 'Electrodomésticos', icono: '📦', costo: '', precio: '', stock: '', min: 2, garantiaMeses: 12 };
     const o = sheet(`<h2>${id ? 'Editar' : 'Nuevo'} producto</h2><div class="sub">Inventario por cantidad, sin seriales</div>
     <div class="row2"><div class="fld"><label>Ícono</label><button type="button" class="in emo-btn" id="pIb">${p.icono}</button><input type="hidden" id="pI" value="${p.icono}"></div><div class="fld"><label>Categoría</label><select class="in" id="pC">${CATS(p.categoria).map(c => `<option ${c === p.categoria ? 'selected' : ''}>${esc(c)}</option>`).join('')}${esJefe() ? '<option value="__new">+ Nueva categoría…</option>' : ''}</select></div></div>
-    <div class="emo" id="pEmo" hidden>${EMOJIS.map(e => `<button type="button">${e}</button>`).join('')}<input class="in" id="pEo" placeholder="Otro: escribe un emoji" style="grid-column:1/-1;margin-top:6px"></div>
+    <div class="emo" id="pEmo" hidden>${EMOJIS.map(e => `<button type="button">${e}</button>`).join('')}<div class="emo-otro"><input class="in" id="pEo" placeholder="Otro emoji (toca 🌐 o 😀 en el teclado)"><button type="button" class="btn pri" id="pEok">Usar</button></div></div>
     <div class="fld"><label>Nombre</label><input class="in" id="pN" value="${esc(p.nombre)}"></div>
     <div class="row3"><div class="fld"><label>Costo $</label><input class="in" id="pCo" type="number" step="0.01" inputmode="decimal" value="${p.costo}"></div><div class="fld"><label>% utilidad 1</label><input class="in" id="pU" type="number" step="0.1" inputmode="decimal" placeholder="30" value="${+p.costo > 0 && +p.precio ? ((p.precio / p.costo - 1) * 100).toFixed(1) : ''}"></div><div class="fld"><label>Precio 1 $</label><input class="in" id="pP" type="number" step="0.01" inputmode="decimal" value="${p.precio}"></div></div><div class="row3"><div class="fld"><label>Precio 2</label><div class="in" style="opacity:.5;text-align:center">opcional</div></div><div class="fld"><label>% utilidad 2</label><input class="in" id="pU2" type="number" step="0.1" inputmode="decimal" placeholder="20" value="${+p.costo > 0 && +p.precio2 ? ((p.precio2 / p.costo - 1) * 100).toFixed(1) : ''}"></div><div class="fld"><label>Precio 2 $</label><input class="in" id="pP2" type="number" step="0.01" inputmode="decimal" value="${p.precio2 ?? ''}"></div></div><div class="sub" id="pGan" style="margin:-4px 0 12px"></div>
     <div class="row2"><div class="fld"><label>Existencia</label><input class="in" id="pS" type="number" value="${p.stock}"></div><div class="fld"><label>Stock mínimo</label><input class="in" id="pM" type="number" value="${p.min}"></div></div>
@@ -329,7 +329,7 @@ const App = window.App = {
     const setE = e => { o.querySelector('#pI').value = e; o.querySelector('#pIb').textContent = e; o.querySelector('#pEmo').hidden = true; };
     o.querySelector('#pIb').onclick = () => { const g = o.querySelector('#pEmo'); g.hidden = !g.hidden; };
     o.querySelectorAll('#pEmo>button').forEach(b => b.onclick = () => setE(b.textContent));
-    o.querySelector('#pEo').oninput = e => { const v = e.target.value.trim(); if (v) { setE([...v][0] === v ? v : v); e.target.value = ''; } };
+    o.querySelector('#pEok').onclick = () => { const i = o.querySelector('#pEo'), v = i.value.trim(); if (!v) return toast('Escribe o pega un emoji'); const seg = window.Intl?.Segmenter ? [...new Intl.Segmenter().segment(v)][0].segment : [...v][0]; setE(seg); i.value = ''; };
     o.querySelector('#pC').onchange = async e => { if (e.target.value !== '__new') return; const n = (prompt('Nombre de la nueva categoría') || '').trim(); if (!n) { e.target.selectedIndex = 0; return; } try { if (!db().config.categorias.includes(n)) await store.setCategorias([...db().config.categorias, n]); const op = new Option(n, n, true, true); e.target.add(op, e.target.options.length - 1); toast('Categoría agregada'); } catch (err) { toast('Error: ' + err.message); e.target.selectedIndex = 0; } };
     const co = o.querySelector('#pCo'), pu = o.querySelector('#pU'), pp = o.querySelector('#pP'), gan = () => { const c = +co.value, v = +pp.value; o.querySelector('#pGan').textContent = c > 0 && v > 0 ? `Ganancia por unidad: $${(v - c).toFixed(2)} · margen sobre venta ${((v - c) / v * 100).toFixed(1)}%` : ''; };
     const pu2 = o.querySelector('#pU2'), pp2 = o.querySelector('#pP2'), calc2 = () => { if (+co.value > 0 && pu2.value !== '') pp2.value = (+co.value * (1 + +pu2.value / 100)).toFixed(2); };
@@ -350,7 +350,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=10'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=11'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
