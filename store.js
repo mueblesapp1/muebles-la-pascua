@@ -34,7 +34,7 @@ export const store = {
     db.clientes = ok(cl);
     db.ventas = ok(ve).map(v => ({ ...v, clienteId: v.cliente_id, items: v.venta_items, netoCashea: +v.neto_cashea, liquidaEstimada: v.liquida_estimada, total: +v.total, inicial: +v.inicial, financiado: +v.financiado, comision: +v.comision }));
     db.gastos = ok(ga).map(g => ({ ...g, monto: +g.monto }));
-    const c = ok(cf); db.config = { comisionCashea: +c.comision_cashea, negocio: c.negocio, ticket: c.ticket || {} }; db.tasa = { valor: +c.tasa, fecha: c.tasa_fecha, fuente: c.tasa_fuente };
+    const c = ok(cf); db.config = { comisionCashea: +c.comision_cashea, negocio: c.negocio, ticket: c.ticket || {}, categorias: c.categorias || ['Electrodomésticos', 'Muebles', 'Colchones', 'Tecnología', 'Otros'] }; db.tasa = { valor: +c.tasa, fecha: c.tasa_fecha, fuente: c.tasa_fuente };
     db.perfiles = ok(pe);
     return db;
   },
@@ -48,6 +48,7 @@ export const store = {
   async updCliente(id, c) { ok(await sb.from('clientes').update(c).eq('id', id)); await this.load(); },
   async addGasto(g) { ok(await sb.from('gastos').insert({ ...g, usuario_id: db.usuario?.id })); await this.load(); },
   async liquidar(id) { ok(await sb.from('ventas').update({ liquidado: true, fecha_liquidacion: today() }).eq('id', id)); await this.load(); },
+  async setCategorias(l) { ok(await sb.from('config').update({ categorias: l }).eq('id', 1)); db.config.categorias = l; },
   async setTicket(t) { ok(await sb.from('config').update({ ticket: t }).eq('id', 1)); db.config.ticket = t; },
   async setTasa(valor, fuente = 'Manual') { ok(await sb.from('config').update({ tasa: +valor, tasa_fecha: today(), tasa_fuente: fuente }).eq('id', 1)); db.tasa = { valor: +valor, fecha: today(), fuente }; },
   async setPerfil(id, ch) { ok(await sb.from('perfiles').update(ch).eq('id', id)); await this.load(); },
