@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=14';
+import { store, today, daysAgo } from './store.js?v=15';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -28,7 +28,7 @@ const I = {
   cog: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
 };
 const ico = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
-const NAV = [['tablero', 'Tablero', 'home'], ['vender', 'Vender', 'sell'], ['inventario', 'Inventario', 'box'], ['cashea', 'Cashea', 'cashea'], ['caja', 'Caja', 'cash'], ['clientes', 'Clientes', 'users'], ['reportes', 'Reportes', 'chart'], ['ajustes', 'Ajustes', 'cog']];
+const NAV = [['tablero', 'Tablero', 'home'], ['vender', 'Vender', 'sell'], ['inventario', 'Inventario', 'box'], ['cashea', 'Por cobrar', 'cashea'], ['caja', 'Caja', 'cash'], ['clientes', 'Clientes', 'users'], ['reportes', 'Reportes', 'chart'], ['ajustes', 'Ajustes', 'cog']];
 
 // ---------- cálculos ----------
 const enRango = (v, n) => v.fecha >= daysAgo(n - 1);
@@ -91,15 +91,16 @@ V.tablero = () => {
   const topV = Object.entries(m.porVend).sort((a, b) => b[1] - a[1]);
   const topP = Object.entries(m.porProd).sort((a, b) => b[1].ing - a[1].ing).slice(0, 5);
   const hoy = db().ventas.filter(v => v.fecha === today()), sum = l => l.reduce((a, v) => a + +v.total, 0);
-  const hC = hoy.filter(v => v.tipo !== 'cashea'), hK = hoy.filter(v => v.tipo === 'cashea'), iniK = hK.reduce((a, v) => a + +v.inicial, 0);
+  const hC = hoy.filter(v => v.tipo === 'contado'), hR = hoy.filter(v => v.tipo === 'credito'), abH = db().abonos.filter(x => x.fecha === today()), hK = hoy.filter(v => v.tipo === 'cashea'), iniK = hK.reduce((a, v) => a + +v.inicial, 0);
   return `<div class="grid">
-  <div class="card hero c12 hoy"><h3>Ventas de hoy <span class="kbd">${fdate(today())}</span></h3><div class="hoy3">
+  <div class="card hero c12 hoy"><h3>Ventas de hoy <span class="kbd">${fdate(today())}</span></h3><div class="hoy3 h4">
    <div><small>Contado</small><b>${fmt(sum(hC))}</b><span>${hC.length} ventas · ${fmt(sum(hC), 'VES')}</span></div>
    <div><small>Crédito Cashea</small><b>${fmt(sum(hK))}</b><span>${hK.length} ventas · inicial ${fmt(iniK)}</span></div>
+   <div><small>Crédito propio</small><b>${fmt(sum(hR))}</b><span>${hR.length} ventas · abonos hoy ${fmt(abH.reduce((s, x) => s + x.monto, 0))}</span></div>
    <div class="tt"><small>Total del día</small><b>${fmt(sum(hoy))}</b><span>${hoy.length} ventas · ${fmt(sum(hoy), 'VES')}</span></div></div></div>
   <div class="card kpi hero c6"><h3>Ventas últimos 30 días <span class="tag ${d >= 0 ? 't-ok' : 't-bad'}">${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(0)}%</span></h3><div class="v">${fmt(m.ventas)}</div><div class="s">${m.vs.length} ventas · ticket promedio ${fmt(m.ticket)}</div></div>
   <div class="card kpi c3"><div class="glow" style="background:var(--ok)"></div><h3>Utilidad neta</h3><div class="v ${m.utilidad >= 0 ? 'up' : 'down'}">${fmt(m.utilidad)}</div><div class="s">Margen bruto ${(m.margen * 100).toFixed(0)}% · gastos ${fmt(m.gastos)}</div></div>
-  <div class="card kpi c3"><div class="glow" style="background:var(--violet)"></div><h3>Cashea te debe</h3><div class="v">${fmt(m.porCobrar)}</div><div class="s">${db().ventas.filter(v => v.tipo === 'cashea' && !v.liquidado).length} ventas pendientes'}</div></div>
+  <div class="card kpi c3"><div class="glow" style="background:var(--violet)"></div><h3>Por cobrar</h3><div class="v">${fmt(m.porCobrar + db().ventas.reduce((s, v) => s + (v.saldo || 0), 0))}</div><div class="s">Clientes ${fmt(db().ventas.reduce((s, v) => s + (v.saldo || 0), 0))} · Cashea ${fmt(m.porCobrar)}'}</div></div>
   <div class="card c8"><h3>Ventas por día <span class="kbd">30 días</span></h3>${areaChart(m.dias)}</div>
   <div class="card c4"><h3>Forma de venta</h3>${donut([{ k: 'Contado', v: cont, c: '#F5A524' }, { k: 'Cashea', v: m.ventas - cont, c: '#A78BFA' }])}<div class="s" style="margin-top:14px;color:var(--mut);font-size:13px">Inventario a costo: <b style="color:var(--txt)">${fmt(m.stockValor)}</b></div></div>
   <div class="card c7"><h3>✨ Copiloto gerencial</h3>${insights(m).map(([e, bg, t, s]) => `<div class="ins"><div class="dot" style="background:${bg}">${e}</div><div><p>${esc(t)}</p><small>${esc(s)}</small></div></div>`).join('') || '<div class="empty">Registra tus primeras ventas y aquí verás consejos.</div>'}</div>
@@ -127,7 +128,7 @@ V.inventario = () => {
   ${cats.map(c => `<h3 style="color:var(--mut);font-size:13px;letter-spacing:1.2px;text-transform:uppercase;margin:18px 0 10px">${esc(c)}</h3><div class="tiles">${db().productos.filter(p => p.categoria === c).map((p, i) => { const pct = Math.min(100, p.stock / Math.max(p.min * 3, 1) * 100); const mg = p.precio ? (p.precio - p.costo) / p.precio * 100 : 0; return `<div class="tile" style="animation-delay:${i * 25}ms" onclick="${esJefe() ? `App.prodForm('${p.id}')` : ''}"><div style="display:flex;justify-content:space-between"><div class="ic">${p.icono}</div>${p.stock <= p.min ? '<span class="tag t-bad" style="height:fit-content">Reponer</span>' : ''}</div><b>${esc(p.nombre)}</b><small>Costo ${fmt(p.costo)} · margen ${mg.toFixed(0)}% · garantía ${p.garantiaMeses || 0}m</small><div class="row"><span class="pr">${fmt(p.precio)}</span><b>${p.stock} <small>uds</small></b></div><div class="bar"><i style="width:${pct}%;${p.stock <= p.min ? 'background:var(--bad)' : ''}"></i></div></div>`; }).join('')}</div>`).join('') || '<div class="empty">Aún no hay productos.</div>'}`;
 };
 
-V.cashea = () => {
+V._cashea = () => {
   const pend = db().ventas.filter(v => v.tipo === 'cashea' && !v.liquidado).sort((a, b) => a.fecha.localeCompare(b.fecha));
   const liq = db().ventas.filter(v => v.tipo === 'cashea' && v.liquidado).slice(-8).reverse();
   const tot = pend.reduce((a, v) => a + v.netoCashea, 0), rec = db().ventas.filter(v => v.tipo === 'cashea' && v.liquidado && (v.fecha_liquidacion || v.fecha) >= today().slice(0, 8) + '01');
@@ -145,11 +146,12 @@ V.cashea = () => {
 V.caja = () => {
   const hoy = db().ventas.filter(v => v.fecha === today());
   const met = {}; hoy.forEach(v => (v.pagos?.length ? v.pagos.map(x => [x.metodo, x.usd]) : [[v.metodo || '—', v.inicial]]).forEach(([k, u]) => met[k] = (met[k] || 0) + +u));
-  const ing = hoy.reduce((a, v) => a + v.inicial, 0);
+  const abH = db().abonos.filter(x => x.fecha === today()); abH.forEach(x => (x.pagos?.length ? x.pagos.map(p => [p.metodo, p.usd]) : [[x.metodo || '—', x.monto]]).forEach(([k, u]) => met[k] = (met[k] || 0) + +u));
+  const ing = hoy.reduce((a, v) => a + v.inicial, 0) + abH.reduce((a, x) => a + x.monto, 0);
   const gh = db().gastos.filter(g => g.fecha === today()), eg = gh.reduce((a, g) => a + g.monto, 0);
   const gm = db().gastos.slice().reverse().slice(0, 12);
   return `<div class="grid">
-  <div class="card kpi hero c4"><h3>Entró hoy a caja</h3><div class="v">${fmt(ing)}</div><div class="s">${hoy.length} ventas (contado + iniciales Cashea)</div></div>
+  <div class="card kpi hero c4"><h3>Entró hoy a caja</h3><div class="v">${fmt(ing)}</div><div class="s">${hoy.length} ventas + ${abH.length} abonos</div></div>
   <div class="card kpi c4"><h3>Gastos de hoy</h3><div class="v down">${fmt(eg)}</div><div class="s">${gh.length} movimientos</div></div>
   <div class="card kpi c4"><h3>Saldo del día</h3><div class="v ${ing - eg >= 0 ? 'up' : 'down'}">${fmt(ing - eg)}</div><div class="s">Tasa ${db().tasa.valor} Bs/$</div></div>
   <div class="card c5"><h3>Por método de pago</h3>${Object.entries(met).map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><span>${esc(k)}</span><b>${both(v)}</b></div>`).join('') || '<div class="empty">Sin ventas hoy todavía</div>'}</div>
@@ -162,7 +164,7 @@ V.clientes = () => {
   const cs = db().clientes.filter(c => !q || c.nombre.toLowerCase().includes(q) || (c.direccion || '').toLowerCase().includes(q) || (dig && ((c.cedula || '').replace(/\D/g, '').includes(dig) || (c.telefono || '').replace(/\D/g, '').includes(dig))));
   const wa = t => '58' + t.replace(/\D/g, '').replace(/^0/, '');
   return `<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap"><input class="in" id="qc" placeholder="🔎 Buscar por nombre, cédula, teléfono o dirección…" value="${esc(window._qc || '')}" oninput="window._qc=this.value;App.go('clientes',true)" style="flex:1;min-width:220px"><button class="btn pri" onclick="App.clienteForm()">+ Nuevo cliente</button></div>
-  <div class="tiles">${cs.map((c, i) => { const s = stats(c.id); return `<div class="tile" style="animation-delay:${i * 20}ms" onclick="App.clienteForm('${c.id}')"><div style="display:flex;justify-content:space-between;align-items:center"><div class="ic" style="font-size:20px;font-weight:700">${esc(c.nombre.trim()[0] || '?').toUpperCase()}</div>${c.telefono ? `<a class="tag t-ok" target="_blank" href="https://wa.me/${wa(c.telefono)}" onclick="event.stopPropagation()">WhatsApp</a>` : ''}</div><b>${esc(c.nombre)}</b><small>${esc(c.cedula || 'Sin cédula')} · ${esc(c.telefono || 'sin teléfono')}</small><small>📍 ${esc(c.direccion || 'Sin dirección')}</small><div class="row"><span class="pr">${fmt(s.t)}</span><small>${s.n} compras${s.u ? ' · ' + fdate(s.u) : ''}</small></div></div>`; }).join('') || '<div class="empty">No hay clientes con ese filtro.</div>'}</div>`;
+  <div class="tiles">${cs.map((c, i) => { const s = stats(c.id); return `<div class="tile" style="animation-delay:${i * 20}ms" onclick="App.clienteForm('${c.id}')"><div style="display:flex;justify-content:space-between;align-items:center"><div class="ic" style="font-size:20px;font-weight:700">${esc(c.nombre.trim()[0] || '?').toUpperCase()}</div>${c.telefono ? `<a class="tag t-ok" target="_blank" href="https://wa.me/${wa(c.telefono)}" onclick="event.stopPropagation()">WhatsApp</a>` : ''}</div><b>${esc(c.nombre)}</b><small>${esc(c.cedula || 'Sin cédula')} · ${esc(c.telefono || 'sin teléfono')}</small><small>📍 ${esc(c.direccion || 'Sin dirección')}</small>${(sd => sd > 0.009 ? `<span class="tag t-am" style="align-self:flex-start">Debe ${fmt(sd)}</span>` : '')(db().ventas.filter(v => v.clienteId === c.id && v.tipo === 'credito').reduce((s, v) => s + v.saldo, 0))}<div class="row"><span class="pr">${fmt(s.t)}</span><small>${s.n} compras${s.u ? ' · ' + fdate(s.u) : ''}</small></div></div>`; }).join('') || '<div class="empty">No hay clientes con ese filtro.</div>'}</div>`;
 };
 
 V.ajustes = () => `<div class="grid">
@@ -176,6 +178,24 @@ V.ajustes = () => `<div class="grid">
   <button class="btn gh block" style="margin-top:16px" onclick="App.borrarDemo()">🧹 Borrar datos de demostración</button></div>` : ''}
   <div class="card c6"><h3>Sesión</h3><p style="margin-bottom:12px">${esc(db().usuario.nombre)} · <span class="tag t-in">${rol()}</span></p><button class="btn gh" onclick="App.logout()">Cerrar sesión</button></div></div>`;
 
+// ---------- cuentas por cobrar ----------
+const CX = window.CX = { tab: 'credito', q: '' };
+V.cashea = () => {
+  const segm = `<div class="card c12" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="cur"><button class="${CX.tab === 'credito' ? 'on' : ''}" onclick="CX.tab='credito';App.go('cashea')">🤝 Clientes</button><button class="${CX.tab === 'cashea' ? 'on' : ''}" onclick="CX.tab='cashea';App.go('cashea')">💳 Cashea</button></div>${CX.tab === 'credito' ? `<input class="in" id="qx" placeholder="🔎 Buscar cliente…" value="${esc(CX.q)}" oninput="CX.q=this.value;App.go('cashea');setTimeout(()=>{const i=document.querySelector('#qx');i.focus();i.setSelectionRange(i.value.length,i.value.length)})" style="flex:1;min-width:180px;max-width:340px">` : ''}</div>`;
+  if (CX.tab === 'cashea') return V._cashea().replace('<div class="grid">', '<div class="grid">' + segm);
+  const cli = id => db().clientes.find(c => c.id === id), q = CX.q.trim().toLowerCase();
+  const abiertas = db().ventas.filter(v => v.tipo === 'credito' && v.saldo > 0.009);
+  const lst = abiertas.filter(v => { const c = cli(v.clienteId); return !q || (c && (c.nombre.toLowerCase().includes(q) || (c.cedula || '').toLowerCase().includes(q) || (c.telefono || '').includes(q))); });
+  const grupos = {}; lst.forEach(v => (grupos[v.clienteId] ||= []).push(v));
+  const deuda = abiertas.reduce((s, v) => s + v.saldo, 0), mes = db().abonos.filter(x => x.fecha >= today().slice(0, 8) + '01');
+  return `<div class="grid">${segm}
+  <div class="card kpi hero c4"><h3>Clientes te deben</h3><div class="v">${fmt(deuda)}</div><div class="s">${abiertas.length} cuentas abiertas · ${fmt(deuda, 'VES')}</div></div>
+  <div class="card kpi c4"><h3>Abonos este mes</h3><div class="v up">${fmt(mes.reduce((s, x) => s + x.monto, 0))}</div><div class="s">${mes.length} abonos registrados</div></div>
+  <div class="card kpi c4"><h3>Clientes con saldo</h3><div class="v">${new Set(abiertas.map(v => v.clienteId)).size}</div><div class="s">Toca Abonar para registrar un pago</div></div>
+  ${Object.entries(grupos).sort((x, y) => y[1].reduce((s, v) => s + v.saldo, 0) - x[1].reduce((s, v) => s + v.saldo, 0)).map(([id, vs]) => { const c = cli(id) || { nombre: 'Sin cliente' }; return `<div class="card c6"><h3>${esc(c.nombre)} <span class="tag t-am">${fmt(vs.reduce((s, v) => s + v.saldo, 0))}</span></h3><small style="color:var(--mut)">${esc(c.cedula || '')} ${c.telefono ? '· ' + esc(c.telefono) : ''}</small>
+   ${vs.map(v => `<div class="cx"><div><b>#${v.numero}</b> <small>${fdate(v.fecha)}</small><br><small>${esc((v.items || []).map(i => i.nombre).join(', '))}</small><div class="cxb"><span>Total ${fmt(v.total)}</span><span>Inicial ${fmt(v.inicial)}</span><span>Abonado ${fmt(v.abonado)}</span></div></div><div style="text-align:right"><div class="cxs">${fmt(v.saldo)}</div><button class="btn pri" style="padding:8px 14px;margin-top:6px" onclick="App.abonoForm('${v.id}')">Abonar</button><br><button class="pill" style="margin-top:6px" onclick="App.historial('${v.id}')">Historial</button></div></div>`).join('')}</div>`; }).join('') || `<div class="card c12"><div class="empty">${q ? 'Ningún cliente con saldo coincide.' : 'Ningún cliente te debe 🎉'}</div></div>`}</div>`;
+};
+
 // ---------- reportes ----------
 const RP = window.RP = { modo: 'hoy', tab: 'ventas', d: today(), h: today() };
 function rango() {
@@ -187,12 +207,13 @@ function rango() {
 }
 function repData() {
   const [d, h] = rango(), vs = db().ventas.filter(v => v.fecha >= d && v.fecha <= h).sort((a, b) => a.fecha < b.fecha ? -1 : 1);
-  const S = (l, f) => l.reduce((a, x) => a + (+f(x) || 0), 0), cont = vs.filter(v => v.tipo !== 'cashea'), cas = vs.filter(v => v.tipo === 'cashea');
-  const dias = {}; vs.forEach(v => { const x = dias[v.fecha] ||= { n: 0, c: 0, k: 0, t: 0 }; x.n++; x.t += v.total; v.tipo === 'cashea' ? x.k += v.total : x.c += v.total; });
-  const met = {}; vs.forEach(v => (v.pagos?.length ? v.pagos : [{ metodo: v.metodo || '—', usd: v.inicial }]).forEach(p => met[p.metodo] = (met[p.metodo] || 0) + (+p.usd || 0)));
+  const S = (l, f) => l.reduce((a, x) => a + (+f(x) || 0), 0), cont = vs.filter(v => v.tipo === 'contado'), cre = vs.filter(v => v.tipo === 'credito'), abP = db().abonos.filter(x => x.fecha >= d && x.fecha <= h), cas = vs.filter(v => v.tipo === 'cashea');
+  const dias = {}; vs.forEach(v => { const x = dias[v.fecha] ||= { n: 0, c: 0, k: 0, t: 0 }; x.n++; x.t += v.total; v.tipo === 'cashea' ? x.k += v.total : v.tipo === 'credito' ? x.r = (x.r || 0) + v.total : x.c += v.total; });
+  const met = {}; vs.forEach(v => (v.pagos?.length ? v.pagos : v.inicial > 0 ? [{ metodo: v.metodo || '—', usd: v.inicial }] : []).forEach(p => met[p.metodo] = (met[p.metodo] || 0) + (+p.usd || 0)));
+  abP.forEach(x => (x.pagos?.length ? x.pagos : [{ metodo: x.metodo || '—', usd: x.monto }]).forEach(p => met[p.metodo] = (met[p.metodo] || 0) + (+p.usd || 0)));
   const prod = {}; vs.forEach(v => (v.items || []).forEach(i => { const x = prod[i.nombre] ||= { n: 0, t: 0, g: 0 }; x.n += i.cant; x.t += i.precio * i.cant; x.g += (i.precio - (i.costo || 0)) * i.cant; }));
   const costo = S(vs, costoVenta), gas = S(db().gastos.filter(g => g.fecha >= d && g.fecha <= h), g => g.monto);
-  return { d, h, vs, cont, cas, dias, met, prod, total: S(vs, v => v.total), tc: S(cont, v => v.total), tk: S(cas, v => v.total), costo, gas, ini: S(cas, v => v.inicial), fin: S(cas, v => v.financiado), com: S(cas, v => v.comision), neto: S(cas, v => v.netoCashea), liq: S(cas.filter(v => v.liquidado), v => v.netoCashea), pend: S(cas.filter(v => !v.liquidado), v => v.netoCashea) };
+  return { d, h, vs, cont, cre, abP, tr: S(cre, v => v.total), iniR: S(cre, v => v.inicial), tab: S(abP, x => x.monto), cas, dias, met, prod, total: S(vs, v => v.total), tc: S(cont, v => v.total), tk: S(cas, v => v.total), costo, gas, ini: S(cas, v => v.inicial), fin: S(cas, v => v.financiado), com: S(cas, v => v.comision), neto: S(cas, v => v.netoCashea), liq: S(cas.filter(v => v.liquidado), v => v.netoCashea), pend: S(cas.filter(v => !v.liquidado), v => v.netoCashea) };
 }
 V.reportes = () => {
   if (!esJefe()) return '<div class="empty">Solo el dueño o un admin ven los reportes.</div>';
@@ -205,11 +226,11 @@ V.reportes = () => {
     <div class="card c12"><h3>Detalle Cashea</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Inicial</th><th>Financiado</th><th>Comisión</th><th>Neto</th><th>Estado</th></tr></thead><tbody>${r.cas.map(v => `<tr><td>${v.numero}</td><td>${fdate(v.fecha)}</td><td>${esc(cli(v.clienteId))}</td><td>${fmt(v.total)}</td><td>${fmt(v.inicial)}</td><td>${fmt(v.financiado)}</td><td>${fmt(v.comision)}</td><td><b>${fmt(v.netoCashea)}</b></td><td>${v.liquidado ? '<span class="tag t-ok">Recibido</span>' : '<span class="tag t-in">Pendiente</span>'}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">Sin ventas Cashea en este período</td></tr>'}</tbody></table></div></div></div>`;
   const tp = Object.entries(r.prod).sort((a, b) => b[1].t - a[1].t).slice(0, 10);
   return `<div class="grid">${per}
-  ${k('Total vendido', fmt(r.total), `${r.vs.length} ventas · ${fmt(r.total, 'VES')}`)}${k('Contado', fmt(r.tc), `${r.cont.length} ventas`)}${k('Crédito Cashea', fmt(r.tk), `${r.cas.length} ventas · inicial ${fmt(r.ini)}`)}${k('Utilidad bruta', fmt(r.total - r.costo - r.com), `Gastos ${fmt(r.gas)} · neta ${fmt(r.total - r.costo - r.com - r.gas)}`)}
-  ${RP.modo !== 'hoy' ? `<div class="card c6"><h3>Por día</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Día</th><th>Ventas</th><th>Contado</th><th>Cashea</th><th>Total</th></tr></thead><tbody>${Object.entries(r.dias).map(([f, x]) => `<tr><td>${fdate(f)}</td><td>${x.n}</td><td>${fmt(x.c)}</td><td>${fmt(x.k)}</td><td><b>${fmt(x.t)}</b></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin ventas</td></tr>'}</tbody></table></div></div>` : ''}
+  ${k('Total vendido', fmt(r.total), `${r.vs.length} ventas · ${fmt(r.total, 'VES')}`)}${k('Contado', fmt(r.tc), `${r.cont.length} ventas`)}${k('Crédito Cashea', fmt(r.tk), `${r.cas.length} ventas · inicial ${fmt(r.ini)}`)}${k('Crédito propio', fmt(r.tr), `${r.cre.length} ventas · abonos ${fmt(r.tab)}`)}${k('Utilidad bruta', fmt(r.total - r.costo - r.com), `Gastos ${fmt(r.gas)} · neta ${fmt(r.total - r.costo - r.com - r.gas)}`)}
+  ${RP.modo !== 'hoy' ? `<div class="card c6"><h3>Por día</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Día</th><th>Ventas</th><th>Contado</th><th>Cashea</th><th>Crédito</th><th>Total</th></tr></thead><tbody>${Object.entries(r.dias).map(([f, x]) => `<tr><td>${fdate(f)}</td><td>${x.n}</td><td>${fmt(x.c)}</td><td>${fmt(x.k)}</td><td>${fmt(x.r || 0)}</td><td><b>${fmt(x.t)}</b></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin ventas</td></tr>'}</tbody></table></div></div>` : ''}
   <div class="card c6"><h3>Cobrado por forma de pago</h3><table class="tbl"><tbody>${Object.entries(r.met).sort((a, b) => b[1] - a[1]).map(([m, t]) => `<tr><td>${esc(m)}</td><td style="text-align:right"><b>${fmt(t)}</b></td></tr>`).join('') || '<tr><td class="empty">Sin cobros</td></tr>'}</tbody></table></div>
   <div class="card c6"><h3>Productos más vendidos</h3><table class="tbl"><thead><tr><th>Producto</th><th>Unid.</th><th>Vendido</th><th>Ganancia</th></tr></thead><tbody>${tp.map(([n, x]) => `<tr><td>${esc(n)}</td><td>${x.n}</td><td>${fmt(x.t)}</td><td>${fmt(x.g)}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">Sin ventas</td></tr>'}</tbody></table></div>
-  <div class="card c12"><h3>Ventas del período</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Pago</th><th>Total</th></tr></thead><tbody>${r.vs.slice().reverse().map(v => `<tr><td>${v.numero}</td><td>${fdate(v.fecha)}</td><td>${esc(cli(v.clienteId))}</td><td><span class="tag ${v.tipo === 'cashea' ? 't-vi' : 't-ok'}">${v.tipo === 'cashea' ? 'Cashea' : 'Contado'}</span></td><td>${esc(v.metodo || '')}</td><td><b>${fmt(v.total)}</b></td></tr>`).join('') || '<tr><td colspan="6" class="empty">Sin ventas en este período</td></tr>'}</tbody></table></div></div></div>`;
+  <div class="card c12"><h3>Ventas del período</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Pago</th><th>Total</th></tr></thead><tbody>${r.vs.slice().reverse().map(v => `<tr><td>${v.numero}</td><td>${fdate(v.fecha)}</td><td>${esc(cli(v.clienteId))}</td><td><span class="tag ${v.tipo === 'cashea' ? 't-vi' : v.tipo === 'credito' ? 't-am' : 't-ok'}">${{ cashea: 'Cashea', credito: 'Crédito' }[v.tipo] || 'Contado'}</span></td><td>${esc(v.metodo || '')}</td><td><b>${fmt(v.total)}</b></td></tr>`).join('') || '<tr><td colspan="6" class="empty">Sin ventas en este período</td></tr>'}</tbody></table></div></div></div>`;
 };
 
 // ---------- hojas (formularios) ----------
@@ -232,7 +253,7 @@ async function ticketBlob(v, t = TK()) {
   txt(t.nombre, { b: 1, z: 30, a: 'center', c: '#0F2A47' }); y += 30;
   [t.rif && 'RIF ' + t.rif, t.direccion, t.telefono && 'Tel. ' + t.telefono, t.instagram].filter(Boolean).forEach(s => { txt(s, { z: 19, a: 'center', c: '#5b6573' }); y += 26; });
   y += 8; hr();
-  lr(`Nota de venta #${v.numero ?? ''}`, fdate(v.fecha || today()), { b: 1 });
+  lr(v.abono ? `Abono a nota #${v.numero ?? ''}` : `Nota de venta #${v.numero ?? ''}`, fdate(v.abono ? today() : (v.fecha || today())), { b: 1 });
   if (t.cliente) { const cl = db().clientes.find(c => c.id === v.clienteId); if (cl) { txt('Cliente: ' + cl.nombre, { z: 20 }); y += 28; if (cl.cedula) { txt('C.I./RIF: ' + cl.cedula, { z: 20, c: '#5b6573' }); y += 28; } } }
   if (t.vendedor && v.vendedor) { txt('Atendido por: ' + v.vendedor, { z: 20, c: '#5b6573' }); y += 28; }
   hr();
@@ -244,6 +265,8 @@ async function ticketBlob(v, t = TK()) {
   lr('TOTAL', '$' + (+v.total).toFixed(2), { b: 1, z: 32, c: '#0F2A47' });
   if (t.bs) lr('En bolívares', 'Bs ' + (v.total * db().tasa.valor).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), { z: 20, c: '#5b6573' });
   if (t.bs) { txt(`Tasa BCV ${db().tasa.valor} Bs/$`, { z: 16, c: '#7b8594' }); y += 26; }
+  if (v.tipo === 'credito' && !v.abono) { y += 6; lr('Inicial pagada', '$' + (+v.inicial).toFixed(2), { z: 21 }); lr('Saldo a crédito', '$' + (+(v.saldo ?? v.financiado)).toFixed(2), { z: 21, b: 1 }); }
+  if (v.abono) { y += 6; lr('Abono recibido', '$' + (+v.abono).toFixed(2), { z: 22, b: 1 }); lr('Saldo pendiente', '$' + (+v.saldo).toFixed(2), { z: 21, c: '#5b6573' }); }
   if (v.tipo === 'cashea') { y += 6; lr('Inicial pagada', '$' + (+v.inicial).toFixed(2), { z: 21 }); lr('Financiado con Cashea', '$' + (v.total - v.inicial).toFixed(2), { z: 21, c: '#5b6573' }); }
   if (t.pagos && v.pagos?.length) { y += 6; txt('Forma de pago', { z: 18, b: 1, c: '#5b6573' }); y += 28; v.pagos.forEach(p => lr(p.metodo, `${p.moneda === 'Bs' ? 'Bs ' : '$'}${(+p.monto).toFixed(2)}`, { z: 19, c: '#5b6573' })); }
   y += 6; hr(); txt(t.pie, { b: 1, z: 22, a: 'center', c: '#F29F05' }); y += 40;
@@ -265,6 +288,46 @@ const App = window.App = {
   nivel(id, n) { const it = cart.find(i => i.productoId === id); it.nivel = n; it.precio = n === 2 ? it.p2 : it.p1; render(); },
   async catAdd() { const n = $('#catIn').value.trim(); if (!n) return; if (CATS().some(c => c.toLowerCase() === n.toLowerCase())) return toast('Ya existe'); try { await store.setCategorias([...CATS(), n]); render(); toast('Categoría agregada'); } catch (e) { toast('Error: ' + e.message); } },
   async catDel(k) { const l = CATS(), c = l[k], n = db().productos.filter(p => p.categoria === c).length; if (!confirm(n ? `${n} productos usan "${c}". Seguirán con ella, pero no aparecerá para nuevos. ¿Quitar?` : `¿Quitar "${c}"?`)) return; try { await store.setCategorias(l.filter((_, i) => i !== k)); render(); } catch (e) { toast('Error: ' + e.message); } },
+  abonoForm(id) {
+    const v = db().ventas.find(x => x.id === id), c = db().clientes.find(x => x.id === v.clienteId), T = db().tasa.valor, METS = ['Pago móvil', 'Efectivo $', 'Efectivo Bs', 'Punto de venta', 'Zelle', 'Binance', 'Transferencia'];
+    const o = sheet(`<h2>Registrar abono</h2><div class="sub">${esc(c?.nombre || '')} · nota #${v.numero}</div>
+    <div class="sum" style="margin-top:0"><div><span>Saldo actual</span><b>${fmt(v.saldo, 'USD')}</b></div><div><span style="color:var(--mut)">En bolívares</span><span>${fmt(v.saldo, 'VES')}</span></div></div>
+    <div class="fld"><label>Método</label><select class="in" id="aM">${METS.map(m => `<option>${m}</option>`).join('')}</select></div>
+    <div class="row2"><div class="fld"><label>Monto</label><input class="in" id="aV" type="number" step="0.01" inputmode="decimal" placeholder="0.00"></div><div class="fld"><label>Moneda</label><select class="in" id="aC"><option>$</option><option selected>Bs</option></select></div></div>
+    <div id="aMsg" style="margin:-4px 0 12px;font-size:13px"></div><button class="pill" id="aTodo" style="margin-bottom:12px">Pagar todo el saldo</button>
+    <div class="fld"><label>Nota (opcional)</label><input class="in" id="aN" placeholder="Ej. referencia del pago móvil"></div>
+    <button class="btn pri block" id="aOk">Guardar abono</button>`);
+    const usd = () => { const m = +o.querySelector('#aV').value || 0; return o.querySelector('#aC').value === 'Bs' ? m / T : m; };
+    const msg = () => { const u = usd(), r = v.saldo - u; o.querySelector('#aMsg').innerHTML = !u ? '' : r < -0.01 ? `<span class="down">Pasa del saldo por ${fmt(-r, 'USD')}</span>` : `<span class="up">${fmt(u, 'USD')} · queda ${fmt(Math.max(0, r), 'USD')}${r <= 0.01 ? ' · ¡saldada!' : ''}</span>`; };
+    o.querySelector('#aM').onchange = e => { o.querySelector('#aC').value = /\$|Zelle|Binance/.test(e.target.value) ? '$' : 'Bs'; msg(); };
+    o.querySelector('#aV').oninput = msg; o.querySelector('#aC').onchange = msg;
+    o.querySelector('#aTodo').onclick = () => { const bs = o.querySelector('#aC').value === 'Bs'; o.querySelector('#aV').value = (bs ? v.saldo * T : v.saldo).toFixed(2); msg(); };
+    o.querySelector('#aOk').onclick = async e => {
+      const u = +usd().toFixed(2); if (!(u > 0)) return toast('Escribe el monto'); if (u > v.saldo + 0.01) return toast('El abono pasa del saldo');
+      e.target.disabled = true; e.target.textContent = 'Guardando…';
+      try {
+        const m = o.querySelector('#aM').value, mon = o.querySelector('#aC').value, monto = +(+o.querySelector('#aV').value).toFixed(2);
+        await store.addAbono({ ventaId: v.id, clienteId: v.clienteId, monto: Math.min(u, v.saldo), metodo: m, pagos: [{ metodo: m, moneda: mon, monto, usd: Math.min(u, v.saldo) }], nota: o.querySelector('#aN').value.trim() });
+        closeSheet(); render(); this.reciboAbono(v.id, Math.min(u, v.saldo), [{ metodo: m, moneda: mon, monto }]);
+      } catch (err) { toast('Error: ' + err.message); e.target.disabled = false; e.target.textContent = 'Guardar abono'; }
+    };
+  },
+  reciboAbono(id, monto, pagos) {
+    const v = db().ventas.find(x => x.id === id), c = db().clientes.find(x => x.id === v.clienteId), tel = c?.telefono ? '58' + c.telefono.replace(/\D/g, '').replace(/^0/, '') : '';
+    const txt = `*${TK().nombre}*\nAbono a la nota #${v.numero}\nAbono recibido: $${monto.toFixed(2)} (Bs ${(monto * db().tasa.valor).toFixed(2)})\nSaldo pendiente: $${v.saldo.toFixed(2)}${v.saldo <= 0.009 ? '\n¡Cuenta saldada! Gracias.' : '\n¡Gracias!'}`;
+    sheet(`<div style="text-align:center;padding-top:20px"><div style="font-size:64px">✅</div><h2>Abono registrado</h2><div class="sub">${v.saldo <= 0.009 ? '¡Cuenta saldada!' : 'Saldo pendiente ' + fmt(v.saldo, 'USD')}</div></div>
+    <img id="tkImg" class="tkprev" alt="Comprobante"><button class="btn pri block" id="tkSh" disabled>Preparando comprobante…</button>
+    <a class="btn gh block" style="margin-top:10px" target="_blank" href="https://wa.me/${tel}?text=${encodeURIComponent(txt)}">Enviar como texto por WhatsApp</a>
+    <button class="btn gh block" style="margin-top:10px" onclick="document.querySelector('.ov').remove()">Listo</button>`);
+    ticketBlob({ ...v, abono: monto, pagos }).then(b => { const im = document.querySelector('#tkImg'), bt = document.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); bt.disabled = false; bt.textContent = '🧾 Enviar comprobante (imagen)'; bt.onclick = () => shareTicket(b, 'abono-' + v.numero); });
+  },
+  historial(id) {
+    const v = db().ventas.find(x => x.id === id), ab = db().abonos.filter(x => x.ventaId === id);
+    sheet(`<h2>Historial nota #${v.numero}</h2><div class="sub">Total ${fmt(v.total)} · inicial ${fmt(v.inicial)} · saldo ${fmt(v.saldo)}</div>
+    <table class="tbl"><tbody>${ab.map(x => `<tr><td>${fdate(x.fecha)}</td><td>${esc(x.metodo || '')}<br><small style="color:var(--mut)">${esc(x.usuario || '')}${x.nota ? ' · ' + esc(x.nota) : ''}</small></td><td style="text-align:right"><b class="up">${fmt(x.monto)}</b>${esJefe() ? `<br><button class="pill del" style="margin-top:4px" onclick="App.delAbono('${x.id}')">Borrar</button>` : ''}</td></tr>`).join('') || '<tr><td class="empty">Sin abonos todavía</td></tr>'}</tbody></table>
+    <button class="btn gh block" style="margin-top:12px" onclick="document.querySelector('.ov').remove()">Cerrar</button>`);
+  },
+  async delAbono(id) { if (!confirm('¿Borrar este abono? El saldo vuelve a subir.')) return; try { await store.delAbono(id); closeSheet(); render(); toast('Abono borrado'); } catch (e) { toast('Error: ' + e.message); } },
   quitar(id) { cart = cart.filter(i => i.productoId !== id); render(); toast('Artículo quitado'); },
   vaciar() { if (!confirm('¿Vaciar toda la venta actual?')) return; cart = []; render(); },
   qty(id, d) { const it = cart.find(i => i.productoId === id); it.cant += d; if (it.cant <= 0) cart = cart.filter(i => i !== it); render(); },
@@ -273,15 +336,18 @@ const App = window.App = {
     const st = { tipo: 'contado', pct: 60 }; const METS = ['Pago móvil', 'Efectivo $', 'Efectivo Bs', 'Punto de venta', 'Zelle', 'Binance', 'Transferencia']; let pagos = [{ metodo: 'Pago móvil', moneda: 'Bs', monto: '' }]; let cobrar = 0;
     const o = sheet(`<h2>Cobrar</h2><div class="sub">${cart.length} productos · ${fmt(tot, 'USD')}</div>
     <div class="fld"><label>Cliente</label><input class="in" id="cBus" placeholder="🔎 Buscar por nombre, cédula o teléfono…" autocomplete="off"><input type="hidden" id="cCli"><div id="cRes" style="margin-top:8px"></div></div>
-    <div class="fld"><label>Forma de venta</label><div class="seg" id="sTipo"><button data-v="contado" class="on">💵 Contado</button><button data-v="cashea">💳 Cashea</button></div></div>
+    <div class="fld"><label>Forma de venta</label><div class="seg" id="sTipo"><button data-v="contado" class="on">💵 Contado</button><button data-v="cashea">💳 Cashea</button><button data-v="credito">🤝 Crédito</button></div></div>
+    <div class="fld" id="fCred" style="display:none"><label>Inicial que paga hoy (opcional)</label><div class="row2"><input class="in" id="iniCred" type="number" step="0.01" inputmode="decimal" placeholder="0.00"><select class="in" id="iniMon"><option>$</option><option>Bs</option></select></div></div>
     <div class="fld" id="fPct" style="display:none"><label>Inicial según el nivel del cliente en Cashea</label><div class="seg" id="sPct">${[60, 50, 40].map(p => `<button data-v="${p}" class="${p === 60 ? 'on' : ''}">${p}%</button>`).join('')}<input class="in" id="pctOtro" type="number" placeholder="Otro %" style="flex:1;min-width:90px"></div></div>
     <div class="fld"><label id="lMet">Método de pago</label><div id="pagos"></div><button class="pill" id="addPago" style="margin-top:8px">+ Otro método</button><div id="pagoMsg" style="margin-top:8px;font-size:13px"></div></div>
     <div class="sum" id="resumen"></div><button class="btn pri block" id="bOk">Confirmar venta</button>`);
     const calc = () => {
-      const pct = st.tipo === 'cashea' ? st.pct : 100, ini = tot * pct / 100, fin = tot - ini, com = st.tipo === 'cashea' ? fin * db().config.comisionCashea / 100 : 0;
-      cobrar = ini; drawPagos(); o.querySelector('#fPct').style.display = st.tipo === 'cashea' ? '' : 'none';
-      o.querySelector('#lMet').textContent = st.tipo === 'cashea' ? 'Método con que paga la inicial' : 'Método de pago';
-      o.querySelector('#resumen').innerHTML = `<div><span>Total</span><b>${fmt(tot, 'USD')}</b></div>` + (st.tipo === 'cashea' ? `<div><span>Inicial ${pct}% (cobras hoy)</span><b>${fmt(ini, 'USD')}</b></div><div><span>Financia Cashea</span><span>${fmt(fin, 'USD')}</span></div><div><span>Comisión ${db().config.comisionCashea}%</span><span class="down">−${fmt(com, 'USD')}</span></div><div><span>Cashea te deposita</span><span class="up">${fmt(fin - com, 'USD')}</span></div>` : '') + `<div class="tot"><span>Cobrar ahora</span><span>${fmt(ini, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares</span><b>${fmt(ini, 'VES')}</b></div>`;
+      const cr = st.tipo === 'credito', iv = +o.querySelector('#iniCred').value || 0, iniC = Math.min(tot, o.querySelector('#iniMon').value === 'Bs' ? iv / db().tasa.valor : iv);
+      const pct = st.tipo === 'cashea' ? st.pct : 100, ini = cr ? iniC : tot * pct / 100, fin = tot - ini, com = st.tipo === 'cashea' ? fin * db().config.comisionCashea / 100 : 0;
+      cobrar = ini; drawPagos(); o.querySelector('#fPct').style.display = st.tipo === 'cashea' ? '' : 'none'; o.querySelector('#fCred').style.display = cr ? '' : 'none';
+      o.querySelector('#lMet').parentElement.style.display = cr && ini <= 0 ? 'none' : '';
+      o.querySelector('#lMet').textContent = st.tipo !== 'contado' ? 'Método con que paga la inicial' : 'Método de pago';
+      o.querySelector('#resumen').innerHTML = `<div><span>Total</span><b>${fmt(tot, 'USD')}</b></div>` + (st.tipo === 'cashea' ? `<div><span>Inicial ${pct}% (cobras hoy)</span><b>${fmt(ini, 'USD')}</b></div><div><span>Financia Cashea</span><span>${fmt(fin, 'USD')}</span></div><div><span>Comisión ${db().config.comisionCashea}%</span><span class="down">−${fmt(com, 'USD')}</span></div><div><span>Cashea te deposita</span><span class="up">${fmt(fin - com, 'USD')}</span></div>` : cr ? `<div><span>Inicial (cobras hoy)</span><b>${fmt(ini, 'USD')}</b></div><div><span>Queda en cuentas por cobrar</span><span class="down">${fmt(fin, 'USD')} · ${fmt(fin, 'VES')}</span></div>` : '') + `<div class="tot"><span>Cobrar ahora</span><span>${fmt(ini, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares</span><b>${fmt(ini, 'VES')}</b></div>`;
     };
     const T = () => db().tasa.valor;
     const usdDe = x => x.moneda === 'Bs' ? (+x.monto || 0) / T() : (+x.monto || 0);
@@ -304,6 +370,7 @@ const App = window.App = {
     };
     const seg = (id, key, num) => o.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => { o.querySelectorAll(`#${id} button`).forEach(x => x.classList.remove('on')); b.classList.add('on'); st[key] = num ? +b.dataset.v : b.dataset.v; calc(); });
     seg('sTipo', 'tipo'); seg('sPct', 'pct', true);
+    o.querySelector('#iniCred').oninput = calc; o.querySelector('#iniMon').onchange = calc;
     o.querySelector('#pctOtro').oninput = e => { const v = +e.target.value; if (v > 0 && v < 100) { st.pct = v; o.querySelectorAll('#sPct button').forEach(x => x.classList.remove('on')); calc(); } };
     const cliUI = () => {
       const q = o.querySelector('#cBus').value.trim().toLowerCase(), sel = o.querySelector('#cCli').value, res = o.querySelector('#cRes');
@@ -324,21 +391,22 @@ const App = window.App = {
     o.querySelector('#bOk').onclick = async e => {
       e.target.disabled = true; e.target.textContent = 'Guardando…';
       try {
-        let ps = pagos.filter(x => +x.monto > 0);
-        if (pagos.length === 1 && !(+pagos[0].monto > 0)) ps = [{ metodo: pagos[0].metodo, moneda: '$', monto: cobrar }];
+        if (st.tipo === 'credito' && !o.querySelector('#cCli').value) throw new Error('la venta a crédito necesita un cliente');
+        let ps = cobrar > 0 ? pagos.filter(x => +x.monto > 0) : [];
+        if (cobrar > 0 && pagos.length === 1 && !(+pagos[0].monto > 0)) ps = [{ metodo: pagos[0].metodo, moneda: '$', monto: cobrar }];
         const pag = ps.reduce((a, x) => a + usdDe(x), 0);
         if (pag + 0.01 < cobrar) throw new Error(`faltan ${fmt(cobrar - pag, 'USD')} por cobrar`);
         const lista = ps.map(x => ({ metodo: x.metodo, moneda: x.moneda, monto: +(+x.monto).toFixed(2), usd: +usdDe(x).toFixed(2) }));
-        const v = await store.addVenta({ clienteId: o.querySelector('#cCli').value || null, items: cart, total: tot, tipo: st.tipo, inicialPct: st.tipo === 'cashea' ? st.pct : 100, metodo: [...new Set(lista.map(x => x.metodo))].join(' + '), pagos: lista });
+        const v = await store.addVenta({ clienteId: o.querySelector('#cCli').value || null, items: cart, total: tot, tipo: st.tipo, inicialPct: st.tipo === 'cashea' ? st.pct : 100, inicial: st.tipo === 'credito' ? +cobrar.toFixed(2) : null, metodo: [...new Set(lista.map(x => x.metodo))].join(' + ') || 'Crédito', pagos: lista });
         cart = []; closeSheet(); this.recibo(v); render();
       } catch (err) { toast('Error: ' + err.message); e.target.disabled = false; e.target.textContent = 'Confirmar venta'; }
     };
   },
   recibo(v) {
     const cli = db().clientes.find(c => c.id === v.clienteId);
-    const txt = `*Muebles La Pascua*\nNota de venta #${v.numero}\n${(v.items || []).map(i => `${i.cant} x ${i.nombre}: $${(+i.precio).toFixed(2)}`).join('\n')}\nTotal: $${(+v.total).toFixed(2)} (Bs ${(v.total * db().tasa.valor).toFixed(2)})${v.tipo === 'cashea' ? `\nInicial pagada: $${(+v.inicial).toFixed(2)}\nResto en cuotas con Cashea` : ''}\n¡Gracias por su compra!`;
+    const txt = `*Muebles La Pascua*\nNota de venta #${v.numero}\n${(v.items || []).map(i => `${i.cant} x ${i.nombre}: $${(+i.precio).toFixed(2)}`).join('\n')}\nTotal: $${(+v.total).toFixed(2)} (Bs ${(v.total * db().tasa.valor).toFixed(2)})${v.tipo === 'cashea' ? `\nInicial pagada: $${(+v.inicial).toFixed(2)}\nResto en cuotas con Cashea` : v.tipo === 'credito' ? `\nInicial: $${(+v.inicial).toFixed(2)}\nSaldo a crédito: $${(+v.saldo).toFixed(2)}` : ''}\n¡Gracias por su compra!`;
     const tel = cli?.telefono ? '58' + cli.telefono.replace(/\D/g, '').replace(/^0/, '') : '';
-    sheet(`<div style="text-align:center;padding-top:20px"><div style="font-size:64px;animation:rise .5s">✅</div><h2>Venta #${v.numero} registrada</h2><div class="sub">${v.tipo === 'cashea' ? 'Cashea · inicial cobrada' : 'Contado'}</div></div>
+    sheet(`<div style="text-align:center;padding-top:20px"><div style="font-size:64px;animation:rise .5s">✅</div><h2>Venta #${v.numero} registrada</h2><div class="sub">${v.tipo === 'cashea' ? 'Cashea · inicial cobrada' : v.tipo === 'credito' ? `Crédito · saldo ${fmt(v.saldo, 'USD')} en cuentas por cobrar` : 'Contado'}</div></div>
     <div class="sum"><div class="tot"><span>Cobrado</span><span>${fmt(v.inicial, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares</span><b>${fmt(v.inicial, 'VES')}</b></div></div>
     <img id="tkImg" class="tkprev" alt="Ticket">
     <button class="btn pri block" id="tkSh" disabled>Preparando ticket…</button>
@@ -387,7 +455,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=14'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=15'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -413,11 +481,11 @@ const App = window.App = {
         sec('Detalle'); tb(['#', 'Fecha', 'Cliente', 'Total', 'Inicial', 'Financiado', 'Comisión', 'Neto', 'Estado'], r.cas.map(v => [v.numero, fdate(v.fecha), cli(v.clienteId), $f(v.total), $f(v.inicial), $f(v.financiado), $f(v.comision), $f(v.netoCashea), v.liquidado ? 'Recibido' : 'Pendiente']), { styles: { fontSize: 8, cellPadding: 4 } });
       } else {
         const un = r.total - r.costo - r.com - r.gas;
-        sec('Resumen'); tb(['Concepto', 'Monto $', 'Monto Bs'], [['Total vendido (' + r.vs.length + ' ventas)', $f(r.total), bs(r.total)], ['Contado (' + r.cont.length + ')', $f(r.tc), bs(r.tc)], ['Crédito Cashea (' + r.cas.length + ')', $f(r.tk), bs(r.tk)], ['Inicial Cashea cobrada', $f(r.ini), bs(r.ini)], ['Costo de mercancía', $f(r.costo), bs(r.costo)], ['Comisión Cashea', $f(r.com), bs(r.com)], ['Gastos', $f(r.gas), bs(r.gas)], [{ content: 'Utilidad neta', styles: { fontStyle: 'bold' } }, { content: $f(un), styles: { fontStyle: 'bold' } }, bs(un)]]);
-        if (RP.modo !== 'hoy') { sec('Ventas por día'); tb(['Día', 'Ventas', 'Contado', 'Cashea', 'Total'], Object.entries(r.dias).map(([f, x]) => [fdate(f), x.n, $f(x.c), $f(x.k), $f(x.t)])); }
+        sec('Resumen'); tb(['Concepto', 'Monto $', 'Monto Bs'], [['Total vendido (' + r.vs.length + ' ventas)', $f(r.total), bs(r.total)], ['Contado (' + r.cont.length + ')', $f(r.tc), bs(r.tc)], ['Crédito Cashea (' + r.cas.length + ')', $f(r.tk), bs(r.tk)], ['Crédito propio (' + r.cre.length + ')', $f(r.tr), bs(r.tr)], ['Abonos cobrados (' + r.abP.length + ')', $f(r.tab), bs(r.tab)], ['Inicial Cashea cobrada', $f(r.ini), bs(r.ini)], ['Costo de mercancía', $f(r.costo), bs(r.costo)], ['Comisión Cashea', $f(r.com), bs(r.com)], ['Gastos', $f(r.gas), bs(r.gas)], [{ content: 'Utilidad neta', styles: { fontStyle: 'bold' } }, { content: $f(un), styles: { fontStyle: 'bold' } }, bs(un)]]);
+        if (RP.modo !== 'hoy') { sec('Ventas por día'); tb(['Día', 'Ventas', 'Contado', 'Cashea', 'Crédito', 'Total'], Object.entries(r.dias).map(([f, x]) => [fdate(f), x.n, $f(x.c), $f(x.k), $f(x.r), $f(x.t)])); }
         sec('Cobrado por forma de pago'); tb(['Forma de pago', 'Monto $', 'Monto Bs'], Object.entries(r.met).sort((a, b) => b[1] - a[1]).map(([m, t]) => [m, $f(t), bs(t)]));
         sec('Productos vendidos'); tb(['Producto', 'Unidades', 'Vendido', 'Ganancia'], Object.entries(r.prod).sort((a, b) => b[1].t - a[1].t).map(([n, x]) => [n, x.n, $f(x.t), $f(x.g)]));
-        sec('Detalle de ventas'); tb(['#', 'Fecha', 'Cliente', 'Tipo', 'Pago', 'Total'], r.vs.map(v => [v.numero, fdate(v.fecha), cli(v.clienteId), v.tipo === 'cashea' ? 'Cashea' : 'Contado', v.metodo || '', $f(v.total)]));
+        sec('Detalle de ventas'); tb(['#', 'Fecha', 'Cliente', 'Tipo', 'Pago', 'Total'], r.vs.map(v => [v.numero, fdate(v.fecha), cli(v.clienteId), { cashea: 'Cashea', credito: 'Crédito' }[v.tipo] || 'Contado', v.metodo || '', $f(v.total)]));
       }
       const n = doc.getNumberOfPages(); for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(`${tk.nombre} · Página ${i} de ${n}`, W / 2, doc.internal.pageSize.getHeight() - 20, { align: 'center' }); }
       const name = `Reporte ${RP.tab === 'cashea' ? 'Cashea' : 'ventas'} ${r.d}${r.d !== r.h ? ' a ' + r.h : ''}.pdf`, blob = doc.output('blob'), f = new File([blob], name, { type: 'application/pdf' });
@@ -431,6 +499,8 @@ const App = window.App = {
     add('Ventas', r.vs.map(v => ({ Numero: v.numero, Fecha: v.fecha, Cliente: cli(v.clienteId), Tipo: v.tipo, Pago: v.metodo, 'Total $': v.total, 'Cobrado $': v.inicial, Vendedor: v.vendedor || '' })));
     add('Por día', Object.entries(r.dias).map(([f, x]) => ({ Fecha: f, Ventas: x.n, 'Contado $': x.c, 'Cashea $': x.k, 'Total $': x.t })));
     add('Productos', Object.entries(r.prod).map(([n, x]) => ({ Producto: n, Unidades: x.n, 'Vendido $': x.t, 'Ganancia $': x.g })));
+    add('Abonos', r.abP.map(x => ({ Fecha: x.fecha, Nota: db().ventas.find(v => v.id === x.ventaId)?.numero, Cliente: cli(x.clienteId), 'Monto $': x.monto, Metodo: x.metodo, Usuario: x.usuario || '' })));
+    add('Por cobrar', db().ventas.filter(v => v.tipo === 'credito' && v.saldo > 0.009).map(v => ({ Numero: v.numero, Fecha: v.fecha, Cliente: cli(v.clienteId), 'Total $': v.total, 'Inicial $': v.inicial, 'Abonado $': v.abonado, 'Saldo $': v.saldo })));
     add('Cashea', r.cas.map(v => ({ Numero: v.numero, Fecha: v.fecha, Cliente: cli(v.clienteId), 'Total $': v.total, 'Inicial $': v.inicial, 'Financiado $': v.financiado, 'Comisión $': v.comision, 'Neto $': v.netoCashea, Estado: v.liquidado ? 'Recibido' : 'Pendiente' })));
     XLSX.writeFile(wb, `Reporte ${r.d}${r.d !== r.h ? ' a ' + r.h : ''}.xlsx`);
   },
@@ -475,7 +545,7 @@ function loginView(modo = 'entrar', msg = '') {
 }
 
 // ---------- render ----------
-const TITLES = { reportes: ['Reportes', 'Ventas y Cashea por período'], tablero: ['Tablero gerencial', 'Lo que pasa en tu negocio, en una mirada'], vender: ['Punto de venta', 'Contado o Cashea, en segundos'], inventario: ['Inventario', 'Existencias, costos y márgenes'], cashea: ['Cashea', 'Lo que Cashea te debe liquidar'], caja: ['Caja del día', 'Entradas, gastos y saldo'], clientes: ['Clientes', 'Tu cartera y su historial'], ajustes: ['Ajustes', 'Tasa, comisiones, usuarios y respaldo'] };
+const TITLES = { reportes: ['Reportes', 'Ventas y Cashea por período'], tablero: ['Tablero gerencial', 'Lo que pasa en tu negocio, en una mirada'], vender: ['Punto de venta', 'Contado o Cashea, en segundos'], inventario: ['Inventario', 'Existencias, costos y márgenes'], cashea: ['Cuentas por cobrar', 'Crédito propio y Cashea'], caja: ['Caja del día', 'Entradas, gastos y saldo'], clientes: ['Clientes', 'Tu cartera y su historial'], ajustes: ['Ajustes', 'Tasa, comisiones, usuarios y respaldo'] };
 function render() {
   if (!db().usuario) return loginView();
   if (!db().usuario.activo) return loginView('entrar', `Hola ${esc(db().usuario.nombre)}, tu usuario está creado. El dueño debe activarlo en Ajustes → Usuarios. <br><br><a href="#" onclick="App.logout();return false" style="color:var(--amber2)">Cerrar sesión</a>`);
