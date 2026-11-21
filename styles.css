@@ -171,3 +171,4 @@ select.in option{background:#0C1322}
 .hoy3.h4{grid-template-columns:repeat(4,1fr)}.hoy3.h4 .tt{grid-column:auto}@media (max-width:520px){.hoy3.h4{grid-template-columns:1fr 1fr}.hoy3.h4 .tt{grid-column:auto}}
 .cx{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}.cx:last-child{border-bottom:0}.cxb{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--mut);margin-top:4px}.cxs{font-size:20px;font-weight:700;color:var(--amber2,#F5A524)}
 .hoy3.h5{grid-template-columns:repeat(5,1fr)}@media (max-width:520px){.hoy3.h5{grid-template-columns:1fr 1fr}.hoy3.h5 .tt{grid-column:span 2}}
+.cxf{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px}@media (max-width:620px){.cxf{grid-template-columns:1fr 1fr}.cxf>div:first-child{grid-column:span 2}.cxf>div:last-child{grid-column:span 2}}
