@@ -39,7 +39,7 @@ export const store = {
     return db;
   },
   async addVenta(v) {
-    const r = ok(await sb.rpc('registrar_venta', { p: { cliente_id: v.clienteId, tipo: v.tipo, metodo: v.metodo, total: v.total, inicial_pct: v.inicialPct, items: v.items.map(i => ({ producto_id: i.productoId, nombre: i.nombre, cant: i.cant, precio: i.precio })) } }));
+    const r = ok(await sb.rpc('registrar_venta', { p: { cliente_id: v.clienteId, tipo: v.tipo, metodo: v.metodo, total: v.total, inicial_pct: v.inicialPct, pagos: v.pagos || null, items: v.items.map(i => ({ producto_id: i.productoId, nombre: i.nombre, cant: i.cant, precio: i.precio })) } }));
     await this.load(); return db.ventas.find(x => x.id === r.id) || r;
   },
   async addProducto(p) { ok(await sb.from('productos').insert({ nombre: p.nombre, categoria: p.categoria, icono: p.icono, costo: p.costo, precio: p.precio, stock: p.stock, minimo: p.min, garantia_meses: p.garantiaMeses })); await this.load(); },
