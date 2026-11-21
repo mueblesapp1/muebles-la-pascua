@@ -1,5 +1,5 @@
-const C = 'mlp-v5';
-self.addEventListener('install', e => { e.waitUntil(caches.open(C).then(c => c.addAll(['./', 'index.html', 'styles.css?v=5', 'app.js?v=5', 'store.js?v=5', 'logo.png', 'mark.png']))); self.skipWaiting(); });
+const C = 'mlp-v6';
+self.addEventListener('install', e => { e.waitUntil(caches.open(C).then(c => c.addAll(['./', 'index.html', 'styles.css?v=6', 'app.js?v=6', 'store.js?v=6', 'logo.png', 'mark.png']))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
