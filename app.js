@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=16';
+import { store, today, daysAgo } from './store.js?v=17';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -180,21 +180,34 @@ V.ajustes = () => `<div class="grid">
   <div class="card c6"><h3>Sesión</h3><p style="margin-bottom:12px">${esc(db().usuario.nombre)} · <span class="tag t-in">${rol()}</span></p><button class="btn gh" onclick="App.logout()">Cerrar sesión</button></div></div>`;
 
 // ---------- cuentas por cobrar ----------
-const CX = window.CX = { tab: 'credito', q: '' };
+const CX = window.CX = { tab: 'credito', q: '', est: 'saldo', d: '', h: '' };
+const cxData = () => {
+  const cli = id => db().clientes.find(c => c.id === id), q = CX.q.trim().toLowerCase();
+  const vs = db().ventas.filter(v => v.tipo === 'credito' && (CX.est === 'todas' || (CX.est === 'saldo' ? v.saldo > 0.009 : v.saldo <= 0.009)) && (!CX.d || v.fecha >= CX.d) && (!CX.h || v.fecha <= CX.h)
+    && (!q || (c => c && (c.nombre.toLowerCase().includes(q) || (c.cedula || '').toLowerCase().includes(q) || (c.telefono || '').includes(q)))(cli(v.clienteId))));
+  const S = f => vs.reduce((s, v) => s + (+f(v) || 0), 0), dias = v => Math.round((new Date(today()) - new Date(v.fecha)) / 864e5);
+  return { vs, cli, dias, total: S(v => v.total), ini: S(v => v.inicial), abo: S(v => v.abonado), saldo: S(v => v.saldo) };
+};
 V.cashea = () => {
   const segm = `<div class="card c12" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="cur"><button class="${CX.tab === 'credito' ? 'on' : ''}" onclick="CX.tab='credito';App.go('cashea')">🤝 Clientes</button><button class="${CX.tab === 'cashea' ? 'on' : ''}" onclick="CX.tab='cashea';App.go('cashea')">💳 Cashea</button></div>${CX.tab === 'credito' ? `<input class="in" id="qx" placeholder="🔎 Buscar cliente…" value="${esc(CX.q)}" oninput="CX.q=this.value;App.go('cashea');setTimeout(()=>{const i=document.querySelector('#qx');i.focus();i.setSelectionRange(i.value.length,i.value.length)})" style="flex:1;min-width:180px;max-width:340px">` : ''}</div>`;
   if (CX.tab === 'cashea') return V._cashea().replace('<div class="grid">', '<div class="grid">' + segm);
   const cli = id => db().clientes.find(c => c.id === id), q = CX.q.trim().toLowerCase();
   const abiertas = db().ventas.filter(v => v.tipo === 'credito' && v.saldo > 0.009);
-  const lst = abiertas.filter(v => { const c = cli(v.clienteId); return !q || (c && (c.nombre.toLowerCase().includes(q) || (c.cedula || '').toLowerCase().includes(q) || (c.telefono || '').includes(q))); });
+  const R = cxData(), lst = R.vs;
   const grupos = {}; lst.forEach(v => (grupos[v.clienteId] ||= []).push(v));
   const deuda = abiertas.reduce((s, v) => s + v.saldo, 0), mes = db().abonos.filter(x => x.fecha >= today().slice(0, 8) + '01');
   return `<div class="grid">${segm}
   <div class="card kpi hero c4"><h3>Clientes te deben</h3><div class="v">${fmt(deuda)}</div><div class="s">${abiertas.length} cuentas abiertas · ${fmt(deuda, 'VES')}</div></div>
   <div class="card kpi c4"><h3>Abonos este mes</h3><div class="v up">${fmt(mes.reduce((s, x) => s + x.monto, 0))}</div><div class="s">${mes.length} abonos registrados</div></div>
   <div class="card kpi c4"><h3>Clientes con saldo</h3><div class="v">${new Set(abiertas.map(v => v.clienteId)).size}</div><div class="s">Toca Abonar para registrar un pago</div></div>
+  <div class="card c12"><h3>Reporte de cuentas por cobrar</h3><div class="cxf">
+   <div class="fld"><label>Estado</label><select class="in" onchange="CX.est=this.value;App.go('cashea')">${[['saldo', 'Con saldo'], ['saldadas', 'Saldadas'], ['todas', 'Todas']].map(([k, t]) => `<option value="${k}" ${CX.est === k ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+   <div class="fld"><label>Venta desde</label><input class="in" type="date" value="${CX.d}" onchange="CX.d=this.value;App.go('cashea')"></div>
+   <div class="fld"><label>Hasta</label><input class="in" type="date" value="${CX.h}" onchange="CX.h=this.value;App.go('cashea')"></div>
+   <div class="fld" style="display:flex;gap:8px;align-items:flex-end"><button class="btn pri" onclick="App.cxPDF()">🖨 PDF</button><button class="btn gh" onclick="App.cxExcel()">Excel</button>${CX.d || CX.h || CX.est !== 'saldo' || CX.q ? `<button class="pill" onclick="Object.assign(CX,{est:'saldo',d:'',h:'',q:''});App.go('cashea')">Limpiar</button>` : ''}</div></div>
+   <div class="cxb" style="font-size:13px;margin-top:6px"><span>${R.vs.length} cuentas</span><span>Total ${fmt(R.total)}</span><span>Inicial ${fmt(R.ini)}</span><span>Abonado ${fmt(R.abo)}</span><b style="color:var(--text)">Saldo ${fmt(R.saldo)}</b></div></div>
   ${Object.entries(grupos).sort((x, y) => y[1].reduce((s, v) => s + v.saldo, 0) - x[1].reduce((s, v) => s + v.saldo, 0)).map(([id, vs]) => { const c = cli(id) || { nombre: 'Sin cliente' }; return `<div class="card c6"><h3>${esc(c.nombre)} <span class="tag t-am">${fmt(vs.reduce((s, v) => s + v.saldo, 0))}</span></h3><small style="color:var(--mut)">${esc(c.cedula || '')} ${c.telefono ? '· ' + esc(c.telefono) : ''}</small>
-   ${vs.map(v => `<div class="cx"><div><b>#${v.numero}</b> <small>${fdate(v.fecha)}</small><br><small>${esc((v.items || []).map(i => i.nombre).join(', '))}</small><div class="cxb"><span>Total ${fmt(v.total)}</span><span>Inicial ${fmt(v.inicial)}</span><span>Abonado ${fmt(v.abonado)}</span></div></div><div style="text-align:right"><div class="cxs">${fmt(v.saldo)}</div><button class="btn pri" style="padding:8px 14px;margin-top:6px" onclick="App.abonoForm('${v.id}')">Abonar</button><br><button class="pill" style="margin-top:6px" onclick="App.historial('${v.id}')">Historial</button></div></div>`).join('')}</div>`; }).join('') || `<div class="card c12"><div class="empty">${q ? 'Ningún cliente con saldo coincide.' : 'Ningún cliente te debe 🎉'}</div></div>`}</div>`;
+   ${vs.map(v => `<div class="cx"><div><b>#${v.numero}</b> <small>${fdate(v.fecha)}</small><br><small>${esc((v.items || []).map(i => i.nombre).join(', '))}</small><div class="cxb"><span>Total ${fmt(v.total)}</span><span>Inicial ${fmt(v.inicial)}</span><span>Abonado ${fmt(v.abonado)}</span></div></div><div style="text-align:right"><div class="cxs">${fmt(v.saldo)}</div>${v.saldo > 0.009 ? `<button class="btn pri" style="padding:8px 14px;margin-top:6px" onclick="App.abonoForm('${v.id}')">Abonar</button>` : '<span class="tag t-ok">Saldada</span>'}<br><button class="pill" style="margin-top:6px" onclick="App.historial('${v.id}')">Historial</button></div></div>`).join('')}</div>`; }).join('') || `<div class="card c12"><div class="empty">${q || CX.d || CX.h || CX.est !== 'saldo' ? 'Ninguna cuenta coincide con el filtro.' : 'Ningún cliente te debe 🎉'}</div></div>`}</div>`;
 };
 
 // ---------- reportes ----------
@@ -456,7 +469,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=16'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=17'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -492,6 +505,38 @@ const App = window.App = {
       const name = `Reporte ${RP.tab === 'cashea' ? 'Cashea' : 'ventas'} ${r.d}${r.d !== r.h ? ' a ' + r.h : ''}.pdf`, blob = doc.output('blob'), f = new File([blob], name, { type: 'application/pdf' });
       if (navigator.canShare?.({ files: [f] }) && /iPhone|iPad|Android/i.test(navigator.userAgent)) { try { await navigator.share({ files: [f], title: name }); } catch (e) { } } else doc.save(name);
     } catch (e) { toast('No pude generar el PDF: ' + e.message); }
+  },
+  async cxPDF() {
+    toast('Generando PDF…');
+    try {
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('https://esm.sh/jspdf@2.5.2'), import('https://esm.sh/jspdf-autotable@3.8.4')]);
+      const r = cxData(), tasa = db().tasa.valor, nm = id => r.cli(id)?.nombre || 'Sin cliente', $f = n => '$' + (+n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), bs = n => 'Bs ' + ((+n || 0) * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const doc = new jsPDF({ unit: 'pt', format: 'letter' }), W = doc.internal.pageSize.getWidth(), nav = [15, 42, 71], amb = [242, 159, 5], tk = TK();
+      const lg = await logoImg(); if (lg) { const c = document.createElement('canvas'); c.width = lg.width; c.height = lg.height; c.getContext('2d').drawImage(lg, 0, 0); doc.addImage(c.toDataURL('image/jpeg', .9), 'JPEG', 40, 28, 110, 110 * lg.height / lg.width); }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...nav); doc.text('Cuentas por cobrar', W - 40, 46, { align: 'right' });
+      const est = { saldo: 'Con saldo', saldadas: 'Saldadas', todas: 'Todas' }[CX.est], per = CX.d || CX.h ? `Ventas ${CX.d ? 'desde ' + fdate(CX.d) : ''} ${CX.h ? 'hasta ' + fdate(CX.h) : ''}` : 'Todas las fechas';
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90);
+      doc.text([`${tk.nombre}${tk.rif ? ' · RIF ' + tk.rif : ''}`, `${est} · ${per}${CX.q ? ' · Cliente: ' + CX.q : ''}`, `Tasa BCV: ${tasa} Bs/$ · Generado ${new Date().toLocaleString('es-VE')}`], W - 40, 64, { align: 'right' });
+      doc.setDrawColor(...amb); doc.setLineWidth(2); doc.line(40, 100, W - 40, 100);
+      let y = 110; const sec = t => { y = (doc.lastAutoTable?.finalY ?? y) + 24; if (y > 700) { doc.addPage(); y = 50; } doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...nav); doc.text(t, 40, y); y += 8; };
+      const tb = (head, body, o = {}) => autoTable(doc, { startY: y, head: [head], body: body.length ? body : [[{ content: 'Sin datos', colSpan: head.length }]], theme: 'striped', headStyles: { fillColor: nav, textColor: 255 }, styles: { fontSize: 9, cellPadding: 5 }, margin: { left: 40, right: 40 }, ...o });
+      sec('Resumen'); tb(['Concepto', 'Monto $', 'Monto Bs'], [['Cuentas (' + r.vs.length + ')', $f(r.total), bs(r.total)], ['Inicial cobrada', $f(r.ini), bs(r.ini)], ['Abonado', $f(r.abo), bs(r.abo)], [{ content: 'Saldo por cobrar', styles: { fontStyle: 'bold' } }, { content: $f(r.saldo), styles: { fontStyle: 'bold' } }, { content: bs(r.saldo), styles: { fontStyle: 'bold' } }]]);
+      const g = {}; r.vs.forEach(v => { const x = g[v.clienteId] ||= { n: 0, s: 0, a: 0, t: 0 }; x.n++; x.s += v.saldo; x.a += v.abonado + v.inicial; x.t += v.total; });
+      sec('Por cliente'); tb(['Cliente', 'Cédula', 'Teléfono', 'Cuentas', 'Total', 'Pagado', 'Saldo'], Object.entries(g).sort((a, b) => b[1].s - a[1].s).map(([id, x]) => { const c = r.cli(id) || {}; return [c.nombre || 'Sin cliente', c.cedula || '', c.telefono || '', x.n, $f(x.t), $f(x.a), $f(x.s)]; }));
+      sec('Detalle de cuentas'); tb(['#', 'Fecha', 'Días', 'Cliente', 'Total', 'Inicial', 'Abonado', 'Saldo'], r.vs.map(v => [v.numero, fdate(v.fecha), r.dias(v), nm(v.clienteId), $f(v.total), $f(v.inicial), $f(v.abonado), $f(v.saldo)]), { styles: { fontSize: 8, cellPadding: 4 } });
+      const ids = new Set(r.vs.map(v => v.id)), ab = db().abonos.filter(x => ids.has(x.ventaId));
+      sec('Abonos'); tb(['Fecha', 'Nota', 'Cliente', 'Método', 'Monto', 'Registró'], ab.map(x => [fdate(x.fecha), db().ventas.find(v => v.id === x.ventaId)?.numero, nm(x.clienteId), x.metodo || '', $f(x.monto), x.usuario || '']), { styles: { fontSize: 8, cellPadding: 4 } });
+      const n = doc.getNumberOfPages(); for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(`${tk.nombre} · Página ${i} de ${n}`, W / 2, doc.internal.pageSize.getHeight() - 20, { align: 'center' }); }
+      const name = `Cuentas por cobrar ${today()}.pdf`, f = new File([doc.output('blob')], name, { type: 'application/pdf' });
+      if (navigator.canShare?.({ files: [f] }) && /iPhone|iPad|Android/i.test(navigator.userAgent)) { try { await navigator.share({ files: [f], title: name }); } catch (e) { } } else doc.save(name);
+    } catch (e) { toast('No pude generar el PDF: ' + e.message); }
+  },
+  async cxExcel() {
+    const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs'), r = cxData(), wb = XLSX.utils.book_new(), nm = id => r.cli(id)?.nombre || '';
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.vs.map(v => ({ Numero: v.numero, Fecha: v.fecha, Dias: r.dias(v), Cliente: nm(v.clienteId), Cedula: r.cli(v.clienteId)?.cedula || '', Telefono: r.cli(v.clienteId)?.telefono || '', 'Total $': v.total, 'Inicial $': v.inicial, 'Abonado $': v.abonado, 'Saldo $': v.saldo }))), 'Cuentas');
+    const ids = new Set(r.vs.map(v => v.id));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(db().abonos.filter(x => ids.has(x.ventaId)).map(x => ({ Fecha: x.fecha, Nota: db().ventas.find(v => v.id === x.ventaId)?.numero, Cliente: nm(x.clienteId), Metodo: x.metodo, 'Monto $': x.monto, Registro: x.usuario || '' }))), 'Abonos');
+    XLSX.writeFile(wb, `Cuentas por cobrar ${today()}.xlsx`);
   },
   async repExcel() {
     const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs'), r = repData(), wb = XLSX.utils.book_new(), tasa = db().tasa.valor, cli = id => db().clientes.find(c => c.id === id)?.nombre || '';
