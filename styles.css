@@ -160,3 +160,4 @@ select.in option{background:#0C1322}
 .tkchk{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 14px;font-size:13px}.tkchk label{display:flex;gap:6px;align-items:center}
 
 .pill.del{color:#ff6b6b;border-color:rgba(255,107,107,.4)}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}@media (max-width:520px){.row3{gap:6px}.row3 .in{padding-left:10px;padding-right:6px}}
