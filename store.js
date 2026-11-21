@@ -45,6 +45,7 @@ export const store = {
   async addProducto(p) { ok(await sb.from('productos').insert({ nombre: p.nombre, categoria: p.categoria, icono: p.icono, costo: p.costo, precio: p.precio, stock: p.stock, minimo: p.min, garantia_meses: p.garantiaMeses })); await this.load(); },
   async updProducto(id, ch) { const m = { ...ch }; if ('min' in m) { m.minimo = m.min; delete m.min; } ok(await sb.from('productos').update(m).eq('id', id)); await this.load(); },
   async addCliente(c) { const r = ok(await sb.from('clientes').insert(c).select().single()); await this.load(); return r; },
+  async updCliente(id, c) { ok(await sb.from('clientes').update(c).eq('id', id)); await this.load(); },
   async addGasto(g) { ok(await sb.from('gastos').insert({ ...g, usuario_id: db.usuario?.id })); await this.load(); },
   async liquidar(id) { ok(await sb.from('ventas').update({ liquidado: true, fecha_liquidacion: today() }).eq('id', id)); await this.load(); },
   async setTasa(valor, fuente = 'Manual') { ok(await sb.from('config').update({ tasa: +valor, tasa_fecha: today(), tasa_fuente: fuente }).eq('id', 1)); db.tasa = { valor: +valor, fecha: today(), fuente }; },
