@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=6';
+import { store, today, daysAgo } from './store.js?v=7';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -114,8 +114,8 @@ V.vender = () => {
   return `<div class="grid"><div class="c8" style="grid-column:span 8">
   <input class="in" placeholder="🔎  Buscar producto…" value="${esc(window._q || '')}" oninput="window._q=this.value;App.go('vender',true)" style="margin-bottom:14px;padding:15px 18px;font-size:16px" ${window._q ? 'autofocus' : ''}>
   <div class="tiles">${ps.map((p, i) => `<div class="tile" style="animation-delay:${i * 25}ms;${p.stock <= 0 ? 'opacity:.4' : ''}" onclick="App.addCart('${p.id}')"><div class="ic">${p.icono}</div><b>${esc(p.nombre)}</b><small>${esc(p.categoria)} · ${p.stock} disp.</small><div class="row"><span class="pr">${fmt(p.precio)}</span><span class="tag t-am">+ Agregar</span></div></div>`).join('')}</div></div>
-  <div class="card c4" style="grid-column:span 4;align-self:start;position:sticky;top:20px"><h3>Venta actual <span>${cart.length}</span></h3>
-  ${cart.length ? cart.map(i => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div><b style="font-size:14px">${esc(i.nombre)}</b><br><small style="color:var(--mut)">${fmt(i.precio)}</small></div><div style="display:flex;gap:6px;align-items:center"><button class="pill" onclick="App.qty('${i.productoId}',-1)">−</button>${i.cant}<button class="pill" onclick="App.qty('${i.productoId}',1)">+</button></div></div>`).join('') : '<div class="empty">Toca un producto para agregarlo</div>'}
+  <div class="card c4" style="grid-column:span 4;align-self:start;position:sticky;top:20px"><h3>Venta actual <span>${cart.length ? `<button class="pill del" onclick="App.vaciar()">Vaciar</button> ` : ''}${cart.length}</span></h3>
+  ${cart.length ? cart.map(i => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div><b style="font-size:14px">${esc(i.nombre)}</b><br><small style="color:var(--mut)">${fmt(i.precio)}</small></div><div style="display:flex;gap:6px;align-items:center"><button class="pill" onclick="App.qty('${i.productoId}',-1)">−</button>${i.cant}<button class="pill" onclick="App.qty('${i.productoId}',1)">+</button><button class="pill del" title="Quitar" onclick="App.quitar('${i.productoId}')">🗑</button></div></div>`).join('') : '<div class="empty">Toca un producto para agregarlo</div>'}
   <div class="sum"><div class="tot"><span>Total</span><span>${fmt(tot, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares</span><span>${fmt(tot, 'VES')}</span></div></div>
   <button class="btn pri block" ${cart.length ? '' : 'disabled style="opacity:.4"'} onclick="App.checkout()">Cobrar →</button></div></div>`;
 };
@@ -222,6 +222,8 @@ const App = window.App = {
   go(p, keep) { this.page = p; if (!keep) { window._q = ''; window._qc = ''; } location.hash = p; render(); },
   setCur(c) { CUR = c; localStorage.setItem('mlp_cur', c); render(); },
   addCart(id) { const p = db().productos.find(p => p.id === id); if (!p || p.stock <= 0) return toast('Sin existencia'); const it = cart.find(i => i.productoId === id); if (it) { if (it.cant < p.stock) it.cant++; } else cart.push({ productoId: id, nombre: p.nombre, precio: +p.precio, cant: 1 }); render(); },
+  quitar(id) { cart = cart.filter(i => i.productoId !== id); render(); toast('Artículo quitado'); },
+  vaciar() { if (!confirm('¿Vaciar toda la venta actual?')) return; cart = []; render(); },
   qty(id, d) { const it = cart.find(i => i.productoId === id); it.cant += d; if (it.cant <= 0) cart = cart.filter(i => i !== it); render(); },
   checkout() {
     const tot = cart.reduce((a, i) => a + i.precio * i.cant, 0);
@@ -331,7 +333,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=6'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=7'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
