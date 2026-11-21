@@ -139,8 +139,8 @@ select.in option{background:#0C1322}
   .top h1{font-size:22px}
   .c3,.c4,.c5{grid-column:span 6}.c6,.c7,.c8,.c12{grid-column:span 12}
   .kpi .v{font-size:24px}.hero .v{font-size:32px}
-  .dock{display:flex;position:fixed;left:12px;right:12px;bottom:12px;z-index:45;justify-content:space-around;padding:8px;border-radius:24px;background:rgba(14,22,40,.82);backdrop-filter:blur(20px);border:1px solid var(--line)}
-  .dock a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--mut);padding:6px 10px;border-radius:14px}
+  .dock{display:flex;position:fixed;left:12px;right:12px;bottom:12px;z-index:45;justify-content:space-around;padding:6px;gap:2px;border-radius:24px;background:rgba(14,22,40,.82);backdrop-filter:blur(20px);border:1px solid var(--line)}
+  .dock a{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;color:var(--mut);padding:6px 2px;border-radius:14px;white-space:nowrap}
   .dock a.on{color:var(--amber2);background:rgba(245,165,36,.1)}
   .dock svg{width:22px;height:22px}
   .fab{bottom:96px;right:18px}
