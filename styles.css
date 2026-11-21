@@ -158,3 +158,5 @@ select.in option{background:#0C1322}
 @media (max-width:520px){.hoy3{grid-template-columns:1fr 1fr}.hoy3 .tt{grid-column:span 2}.hoy3 b{font-size:20px}}
 .tkprev{display:block;width:100%;max-width:320px;margin:14px auto;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.4);background:#fff}
 .tkchk{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 14px;font-size:13px}.tkchk label{display:flex;gap:6px;align-items:center}
+
+.pill.del{color:#ff6b6b;border-color:rgba(255,107,107,.4)}
