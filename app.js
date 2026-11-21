@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=15';
+import { store, today, daysAgo } from './store.js?v=16';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -93,11 +93,12 @@ V.tablero = () => {
   const hoy = db().ventas.filter(v => v.fecha === today()), sum = l => l.reduce((a, v) => a + +v.total, 0);
   const hC = hoy.filter(v => v.tipo === 'contado'), hR = hoy.filter(v => v.tipo === 'credito'), abH = db().abonos.filter(x => x.fecha === today()), hK = hoy.filter(v => v.tipo === 'cashea'), iniK = hK.reduce((a, v) => a + +v.inicial, 0);
   return `<div class="grid">
-  <div class="card hero c12 hoy"><h3>Ventas de hoy <span class="kbd">${fdate(today())}</span></h3><div class="hoy3 h4">
+  <div class="card hero c12 hoy"><h3>Ventas de hoy <span class="kbd">${fdate(today())}</span></h3><div class="hoy3 h5">
    <div><small>Contado</small><b>${fmt(sum(hC))}</b><span>${hC.length} ventas · ${fmt(sum(hC), 'VES')}</span></div>
    <div><small>Crédito Cashea</small><b>${fmt(sum(hK))}</b><span>${hK.length} ventas · inicial ${fmt(iniK)}</span></div>
-   <div><small>Crédito propio</small><b>${fmt(sum(hR))}</b><span>${hR.length} ventas · abonos hoy ${fmt(abH.reduce((s, x) => s + x.monto, 0))}</span></div>
-   <div class="tt"><small>Total del día</small><b>${fmt(sum(hoy))}</b><span>${hoy.length} ventas · ${fmt(sum(hoy), 'VES')}</span></div></div></div>
+   <div><small>Crédito propio</small><b>${fmt(sum(hR))}</b><span>${hR.length} ventas · inicial ${fmt(hR.reduce((s, v) => s + +v.inicial, 0))}</span></div>
+   <div><small>Abonos del día</small><b class="up">${fmt(abH.reduce((s, x) => s + x.monto, 0))}</b><span>${abH.length} abonos · ${fmt(abH.reduce((s, x) => s + x.monto, 0), 'VES')}</span></div>
+   <div class="tt"><small>Total del día</small><b>${fmt(sum(hoy))}</b><span>${hoy.length} ventas · entró a caja ${fmt(hoy.reduce((s, v) => s + +v.inicial, 0) + abH.reduce((s, x) => s + x.monto, 0))}</span></div></div></div>
   <div class="card kpi hero c6"><h3>Ventas últimos 30 días <span class="tag ${d >= 0 ? 't-ok' : 't-bad'}">${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(0)}%</span></h3><div class="v">${fmt(m.ventas)}</div><div class="s">${m.vs.length} ventas · ticket promedio ${fmt(m.ticket)}</div></div>
   <div class="card kpi c3"><div class="glow" style="background:var(--ok)"></div><h3>Utilidad neta</h3><div class="v ${m.utilidad >= 0 ? 'up' : 'down'}">${fmt(m.utilidad)}</div><div class="s">Margen bruto ${(m.margen * 100).toFixed(0)}% · gastos ${fmt(m.gastos)}</div></div>
   <div class="card kpi c3"><div class="glow" style="background:var(--violet)"></div><h3>Por cobrar</h3><div class="v">${fmt(m.porCobrar + db().ventas.reduce((s, v) => s + (v.saldo || 0), 0))}</div><div class="s">Clientes ${fmt(db().ventas.reduce((s, v) => s + (v.saldo || 0), 0))} · Cashea ${fmt(m.porCobrar)}'}</div></div>
@@ -455,7 +456,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=15'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=16'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
