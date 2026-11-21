@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js';
+import { store, today, daysAgo } from './store.js?v=3';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -137,7 +137,7 @@ V.cashea = () => {
 
 V.caja = () => {
   const hoy = db().ventas.filter(v => v.fecha === today());
-  const met = {}; hoy.forEach(v => met[v.metodo || '—'] = (met[v.metodo || '—'] || 0) + v.inicial);
+  const met = {}; hoy.forEach(v => (v.pagos?.length ? v.pagos.map(x => [x.metodo, x.usd]) : [[v.metodo || '—', v.inicial]]).forEach(([k, u]) => met[k] = (met[k] || 0) + +u));
   const ing = hoy.reduce((a, v) => a + v.inicial, 0);
   const gh = db().gastos.filter(g => g.fecha === today()), eg = gh.reduce((a, g) => a + g.monto, 0);
   const gm = db().gastos.slice().reverse().slice(0, 12);
@@ -176,21 +176,37 @@ const App = window.App = {
   qty(id, d) { const it = cart.find(i => i.productoId === id); it.cant += d; if (it.cant <= 0) cart = cart.filter(i => i !== it); render(); },
   checkout() {
     const tot = cart.reduce((a, i) => a + i.precio * i.cant, 0);
-    const st = { tipo: 'contado', pct: 60, metodo: 'Pago móvil' };
+    const st = { tipo: 'contado', pct: 60 }; const METS = ['Pago móvil', 'Efectivo $', 'Efectivo Bs', 'Punto de venta', 'Zelle', 'Binance', 'Transferencia']; let pagos = [{ metodo: 'Pago móvil', moneda: 'Bs', monto: '' }]; let cobrar = 0;
     const o = sheet(`<h2>Cobrar</h2><div class="sub">${cart.length} productos · ${fmt(tot, 'USD')}</div>
     <div class="fld"><label>Cliente</label><input class="in" id="cBus" placeholder="🔎 Buscar por nombre, cédula o teléfono…" autocomplete="off"><input type="hidden" id="cCli"><div id="cRes" style="margin-top:8px"></div></div>
     <div class="fld"><label>Forma de venta</label><div class="seg" id="sTipo"><button data-v="contado" class="on">💵 Contado</button><button data-v="cashea">💳 Cashea</button></div></div>
     <div class="fld" id="fPct" style="display:none"><label>Inicial según el nivel del cliente en Cashea</label><div class="seg" id="sPct">${[60, 50, 40].map(p => `<button data-v="${p}" class="${p === 60 ? 'on' : ''}">${p}%</button>`).join('')}<input class="in" id="pctOtro" type="number" placeholder="Otro %" style="flex:1;min-width:90px"></div></div>
-    <div class="fld"><label id="lMet">Método de pago</label><div class="seg" id="sMet">${['Pago móvil', 'Efectivo $', 'Efectivo Bs', 'Punto de venta', 'Zelle', 'Binance'].map(m => `<button data-v="${m}" class="${m === 'Pago móvil' ? 'on' : ''}">${m}</button>`).join('')}</div></div>
+    <div class="fld"><label id="lMet">Método de pago</label><div id="pagos"></div><button class="pill" id="addPago" style="margin-top:8px">+ Otro método</button><div id="pagoMsg" style="margin-top:8px;font-size:13px"></div></div>
     <div class="sum" id="resumen"></div><button class="btn pri block" id="bOk">Confirmar venta</button>`);
     const calc = () => {
       const pct = st.tipo === 'cashea' ? st.pct : 100, ini = tot * pct / 100, fin = tot - ini, com = st.tipo === 'cashea' ? fin * db().config.comisionCashea / 100 : 0;
-      o.querySelector('#fPct').style.display = st.tipo === 'cashea' ? '' : 'none';
+      cobrar = ini; drawPagos(); o.querySelector('#fPct').style.display = st.tipo === 'cashea' ? '' : 'none';
       o.querySelector('#lMet').textContent = st.tipo === 'cashea' ? 'Método con que paga la inicial' : 'Método de pago';
       o.querySelector('#resumen').innerHTML = `<div><span>Total</span><b>${fmt(tot, 'USD')}</b></div>` + (st.tipo === 'cashea' ? `<div><span>Inicial ${pct}% (cobras hoy)</span><b>${fmt(ini, 'USD')}</b></div><div><span>Financia Cashea</span><span>${fmt(fin, 'USD')}</span></div><div><span>Comisión ${db().config.comisionCashea}%</span><span class="down">−${fmt(com, 'USD')}</span></div><div><span>Cashea te deposita</span><span class="up">${fmt(fin - com, 'USD')}</span></div>` : '') + `<div class="tot"><span>Cobrar ahora</span><span>${fmt(ini, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares</span><b>${fmt(ini, 'VES')}</b></div>`;
     };
+    const T = () => db().tasa.valor;
+    const usdDe = x => x.moneda === 'Bs' ? (+x.monto || 0) / T() : (+x.monto || 0);
+    const pagoMsg = () => { const pag = pagos.reduce((a, x) => a + usdDe(x), 0), f = cobrar - pag, m = o.querySelector('#pagoMsg');
+      m.innerHTML = pagos.length === 1 && !pagos[0].monto ? `<span style="color:var(--mut)">Se cobra todo con ${pagos[0].metodo}</span>` : Math.abs(f) < 0.01 ? '<span class="up">✓ Pago completo</span>' : f > 0 ? `<span class="down">Faltan ${fmt(f, 'USD')} · ${fmt(f, 'VES')}</span>` : `<span class="down">Sobran ${fmt(-f, 'USD')} (vuelto)</span>`; };
+    const drawPagos = () => {
+      const box = o.querySelector('#pagos');
+      box.innerHTML = pagos.map((x, i) => `<div style="display:flex;gap:6px;margin-bottom:6px"><select class="in" data-i="${i}" data-k="metodo" style="flex:1.4">${METS.map(m => `<option ${m === x.metodo ? 'selected' : ''}>${m}</option>`).join('')}</select><select class="in" data-i="${i}" data-k="moneda" style="width:70px"><option ${x.moneda === '$' ? 'selected' : ''}>$</option><option ${x.moneda === 'Bs' ? 'selected' : ''}>Bs</option></select><input class="in" data-i="${i}" data-k="monto" type="number" step="0.01" inputmode="decimal" placeholder="${pagos.length === 1 ? 'Todo' : 'Monto'}" value="${x.monto}" style="flex:1">${pagos.length > 1 ? `<button class="pill" data-del="${i}">✕</button>` : ''}</div>`).join('');
+      box.querySelectorAll('[data-k]').forEach(el => el.oninput = el.onchange = () => { const x = pagos[el.dataset.i]; x[el.dataset.k] = el.value; if (el.dataset.k === 'metodo') { x.moneda = /\$|Zelle|Binance/.test(el.value) ? '$' : 'Bs'; drawPagos(); } else if (el.dataset.k === 'moneda') drawPagos(); else pagoMsg(); });
+      box.querySelectorAll('[data-del]').forEach(el => el.onclick = () => { pagos.splice(+el.dataset.del, 1); drawPagos(); });
+      pagoMsg();
+    };
+    o.querySelector('#addPago').onclick = () => {
+      if (pagos.length === 1 && !pagos[0].monto) pagos[0].monto = '';
+      const pag = pagos.reduce((a, x) => a + usdDe(x), 0), f = Math.max(0, cobrar - pag);
+      pagos.push({ metodo: 'Efectivo $', moneda: '$', monto: pagos[0].monto ? f.toFixed(2) : '' }); drawPagos();
+    };
     const seg = (id, key, num) => o.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => { o.querySelectorAll(`#${id} button`).forEach(x => x.classList.remove('on')); b.classList.add('on'); st[key] = num ? +b.dataset.v : b.dataset.v; calc(); });
-    seg('sTipo', 'tipo'); seg('sPct', 'pct', true); seg('sMet', 'metodo');
+    seg('sTipo', 'tipo'); seg('sPct', 'pct', true);
     o.querySelector('#pctOtro').oninput = e => { const v = +e.target.value; if (v > 0 && v < 100) { st.pct = v; o.querySelectorAll('#sPct button').forEach(x => x.classList.remove('on')); calc(); } };
     const cliUI = () => {
       const q = o.querySelector('#cBus').value.trim().toLowerCase(), sel = o.querySelector('#cCli').value, res = o.querySelector('#cRes');
@@ -211,7 +227,12 @@ const App = window.App = {
     o.querySelector('#bOk').onclick = async e => {
       e.target.disabled = true; e.target.textContent = 'Guardando…';
       try {
-        const v = await store.addVenta({ clienteId: o.querySelector('#cCli').value || null, items: cart, total: tot, tipo: st.tipo, inicialPct: st.tipo === 'cashea' ? st.pct : 100, metodo: st.metodo });
+        let ps = pagos.filter(x => +x.monto > 0);
+        if (pagos.length === 1 && !(+pagos[0].monto > 0)) ps = [{ metodo: pagos[0].metodo, moneda: '$', monto: cobrar }];
+        const pag = ps.reduce((a, x) => a + usdDe(x), 0);
+        if (pag + 0.01 < cobrar) throw new Error(`faltan ${fmt(cobrar - pag, 'USD')} por cobrar`);
+        const lista = ps.map(x => ({ metodo: x.metodo, moneda: x.moneda, monto: +(+x.monto).toFixed(2), usd: +usdDe(x).toFixed(2) }));
+        const v = await store.addVenta({ clienteId: o.querySelector('#cCli').value || null, items: cart, total: tot, tipo: st.tipo, inicialPct: st.tipo === 'cashea' ? st.pct : 100, metodo: [...new Set(lista.map(x => x.metodo))].join(' + '), pagos: lista });
         cart = []; closeSheet(); this.recibo(v); render();
       } catch (err) { toast('Error: ' + err.message); e.target.disabled = false; e.target.textContent = 'Confirmar venta'; }
     };
@@ -248,7 +269,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=3'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
