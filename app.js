@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=18';
+import { store, today, daysAgo } from './store.js?v=19';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -7,6 +7,9 @@ let cart = [];
 const db = () => store.db;
 const rol = () => db().usuario?.rol;
 const esJefe = () => ['dueno', 'admin'].includes(rol());
+const MODS = [['tablero', 'Tablero'], ['vender', 'Vender'], ['ventas', 'Ventas'], ['inventario', 'Inventario'], ['cashea', 'Por cobrar'], ['caja', 'Caja'], ['clientes', 'Clientes'], ['reportes', 'Reportes']];
+const modsDef = r => r === 'admin' ? MODS.map(m => m[0]) : r === 'cajero' ? ['vender', 'ventas', 'cashea', 'caja', 'clientes'] : ['vender', 'ventas', 'clientes'];
+const puede = k => k === 'ajustes' || rol() === 'dueno' || (db().usuario?.modulos || modsDef(rol())).includes(k);
 
 // ---------- formato ----------
 const fmt = (usd, cur = CUR) => cur === 'USD'
@@ -176,7 +179,7 @@ V.ajustes = () => `<div class="grid">
   ${esJefe() ? `<div class="card c6"><h3>Ticket de venta</h3>${(t => `<div class="fld"><label>Nombre del negocio</label><input class="in" id="tkN" value="${esc(t.nombre)}"></div><div class="row2"><div class="fld"><label>RIF</label><input class="in" id="tkR" placeholder="J-" value="${esc(t.rif)}"></div><div class="fld"><label>Teléfono</label><input class="in" id="tkT" value="${esc(t.telefono)}"></div></div><div class="fld"><label>Dirección</label><input class="in" id="tkD" value="${esc(t.direccion)}"></div><div class="fld"><label>Instagram</label><input class="in" id="tkI" placeholder="@" value="${esc(t.instagram)}"></div><div class="fld"><label>WhatsApp del almacén</label><input class="in" id="tkA" placeholder="0414-0000000" value="${esc(t.almacen || '')}"></div><div class="fld"><label>Mensaje al pie</label><input class="in" id="tkP" value="${esc(t.pie)}"></div><div class="tkchk">${[['logo', 'Logo'], ['bs', 'Monto en Bs'], ['cliente', 'Datos del cliente'], ['pagos', 'Formas de pago'], ['garantia', 'Garantía'], ['vendedor', 'Vendedor']].map(([k, l]) => `<label><input type="checkbox" id="tk_${k}" ${t[k] ? 'checked' : ''}> ${l}</label>`).join('')}</div><div class="row2"><button class="btn gh" onclick="App.tkPrev()">Vista previa</button><button class="btn pri" onclick="App.tkSave()">Guardar</button></div>`)(TK())}</div>` : ''}
   ${esJefe() ? `<div class="card c6"><h3>Categorías</h3><div class="chips">${CATS().map((c, k) => `<span class="chip">${esc(c)}<button onclick="App.catDel(${k})" title="Quitar">×</button></span>`).join('')}</div><div class="row2" style="margin-top:12px"><input class="in" id="catIn" placeholder="Nueva categoría"><button class="btn pri" onclick="App.catAdd()">+ Agregar</button></div></div>` : ''}
   <div class="card c6"><h3>Respaldo</h3><p style="color:var(--mut);margin-bottom:14px">Descarga toda la base de datos en un Excel, una hoja por tabla.</p><button class="btn pri" onclick="App.respaldar()">⬇ Respaldar ahora</button></div>
-  ${rol() === 'dueno' ? `<div class="card c6"><h3>Usuarios</h3>${db().perfiles.map(u => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);gap:8px"><span>${esc(u.nombre)} ${u.activo ? '' : '<span class="tag t-am">Pendiente</span>'}</span>${u.id === db().usuario.id ? '<span class="tag t-vi">Dueño (tú)</span>' : `<span style="display:flex;gap:6px"><select class="in" style="padding:6px 8px;width:auto" onchange="App.setRol('${u.id}',this.value)">${['vendedor', 'cajero', 'admin'].map(r => `<option ${u.rol === r ? 'selected' : ''}>${r}</option>`).join('')}</select><button class="pill" onclick="App.toggleUser('${u.id}',${!u.activo})">${u.activo ? 'Bloquear' : 'Activar'}</button></span>`}</div>`).join('')}<p style="color:var(--mut);font-size:12px;margin-top:10px">Tus empleados se registran en la app y aquí los activas.</p>
+  ${rol() === 'dueno' ? `<div class="card c6"><h3>Usuarios <button class="pill" onclick="App.userForm()">+ Nuevo usuario</button></h3>${db().perfiles.map(u => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:8px"><span>${esc(u.nombre)}<br><small style="color:var(--mut)">${esc(u.email || '')}</small></span>${u.id === db().usuario.id ? '<span class="tag t-vi">Dueño (tú)</span>' : `<span style="display:flex;gap:6px;align-items:center"><span class="tag ${u.activo ? 't-in' : 't-bad'}">${u.activo ? u.rol : 'Bloqueado'}</span><button class="pill" onclick="App.userForm('${u.id}')">Editar</button></span>`}</div>`).join('')}<p style="color:var(--mut);font-size:12px;margin-top:10px">Solo tú creas usuarios y eliges a qué módulos entra cada uno.</p>
   <button class="btn gh block" style="margin-top:16px" onclick="App.borrarDemo()">🧹 Borrar datos de demostración</button></div>` : ''}
   <div class="card c6"><h3>Sesión</h3><p style="margin-bottom:12px">${esc(db().usuario.nombre)} · <span class="tag t-in">${rol()}</span></p><button class="btn gh" onclick="App.logout()">Cerrar sesión</button></div></div>`;
 
@@ -512,10 +515,33 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=18'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=19'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
+  },
+  userForm(id) {
+    const u = id ? db().perfiles.find(x => x.id === id) : { rol: 'vendedor', activo: true }, mods = u.modulos || modsDef(u.rol);
+    const o = sheet(`<h2>${id ? 'Editar usuario' : 'Nuevo usuario'}</h2><div class="sub">${id ? esc(u.email || '') : 'Entrará con este correo y contraseña'}</div>
+    <div class="fld"><label>Nombre</label><input class="in" id="uN" value="${esc(u.nombre || '')}"></div>
+    ${id ? '' : '<div class="fld"><label>Correo</label><input class="in" id="uE" type="email" autocomplete="off" placeholder="empleado@gmail.com"></div>'}
+    <div class="fld"><label>${id ? 'Nueva contraseña (déjala vacía para no cambiarla)' : 'Contraseña (mínimo 6)'}</label><input class="in" id="uP" type="text" autocomplete="new-password"></div>
+    <div class="fld"><label>Perfil</label><div class="seg" id="uR">${[['vendedor', 'Vendedor'], ['cajero', 'Cajero'], ['admin', 'Administrador']].map(([k, l]) => `<button data-v="${k}" class="${u.rol === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+    <div class="fld"><label>Módulos a los que puede entrar</label><div class="tkchk" id="uM">${MODS.map(([k, l]) => `<label><input type="checkbox" value="${k}" ${mods.includes(k) ? 'checked' : ''}> ${l}</label>`).join('')}</div><small style="color:var(--mut)">Ajustes siempre aparece para cerrar sesión. Los permisos de borrar, anular y configurar son solo de Administrador.</small></div>
+    ${id ? `<label style="display:flex;gap:8px;align-items:center;margin-bottom:14px"><input type="checkbox" id="uA" ${u.activo ? 'checked' : ''}> Usuario activo (desmárcalo para bloquear la entrada)</label>` : ''}
+    <button class="btn pri block" id="uOk">${id ? 'Guardar cambios' : 'Crear usuario'}</button>`);
+    let r = u.rol;
+    o.querySelectorAll('#uR button').forEach(b => b.onclick = () => { o.querySelectorAll('#uR button').forEach(x => x.classList.remove('on')); b.classList.add('on'); r = b.dataset.v; const d = modsDef(r); o.querySelectorAll('#uM input').forEach(c => c.checked = d.includes(c.value)); });
+    o.querySelector('#uOk').onclick = async e => {
+      const n = o.querySelector('#uN').value.trim(), p = o.querySelector('#uP').value, m = [...o.querySelectorAll('#uM input:checked')].map(c => c.value);
+      if (!n) return toast('Falta el nombre'); if (!m.length) return toast('Elige al menos un módulo'); if ((!id || p) && p.length < 6) return toast('La contraseña necesita al menos 6 caracteres');
+      e.target.disabled = true; e.target.textContent = 'Guardando…';
+      try {
+        if (id) { await store.setPerfil(id, { nombre: n, rol: r, modulos: m, activo: o.querySelector('#uA').checked }); if (p) await store.cambiarClave(id, p); }
+        else { const em = o.querySelector('#uE').value.trim(); if (!/^\S+@\S+\.\S+$/.test(em)) throw new Error('correo inválido'); await store.crearUsuario({ email: em, pass: p, nombre: n, rol: r, modulos: m }); }
+        closeSheet(); render(); toast(id ? 'Usuario actualizado' : 'Usuario creado. Ya puede entrar con su correo y contraseña');
+      } catch (err) { toast('Error: ' + err.message); e.target.disabled = false; e.target.textContent = id ? 'Guardar cambios' : 'Crear usuario'; }
+    };
   },
   async setRol(id, r) { await store.setPerfil(id, { rol: r }); toast('Rol actualizado'); },
   async toggleUser(id, a) { await store.setPerfil(id, { activo: a }); render(); },
@@ -624,8 +650,7 @@ function loginView(modo = 'entrar', msg = '') {
   <div class="fld"><label>Correo</label><input class="in" id="lE" type="email" required autocomplete="email"></div>
   <div class="fld"><label>Contraseña</label><input class="in" id="lP" type="password" required minlength="6" autocomplete="${modo === 'registro' ? 'new-password' : 'current-password'}"></div>
   <button class="btn pri block">${modo === 'registro' ? 'Crear mi usuario' : 'Entrar'}</button></form>
-  <p style="text-align:center;margin-top:16px;color:var(--mut);font-size:13px">${modo === 'registro' ? '¿Ya tienes usuario? <a href="#" id="sw" style="color:var(--amber2)">Entrar</a>' : '¿Eres nuevo? <a href="#" id="sw" style="color:var(--amber2)">Crear usuario</a>'}</p></div></div>`;
-  $('#sw').onclick = e => { e.preventDefault(); loginView(modo === 'registro' ? 'entrar' : 'registro'); };
+  <p style="text-align:center;margin-top:16px;color:var(--mut);font-size:13px">¿No tienes usuario? Pídeselo al dueño del negocio.</p></div></div>`;
   $('#fL').onsubmit = async e => {
     e.preventDefault(); const b = e.target.querySelector('button'); b.disabled = true; b.textContent = 'Un momento…';
     try { if (modo === 'registro') await store.registro($('#lN').value, $('#lE').value, $('#lP').value); else await store.login($('#lE').value, $('#lP').value); await boot(); }
@@ -639,14 +664,15 @@ function render() {
   if (!db().usuario) return loginView();
   if (!db().usuario.activo) return loginView('entrar', `Hola ${esc(db().usuario.nombre)}, tu usuario está creado. El dueño debe activarlo en Ajustes → Usuarios. <br><br><a href="#" onclick="App.logout();return false" style="color:var(--amber2)">Cerrar sesión</a>`);
   const p = App.page, [t, s] = TITLES[p];
-  const nav = NAV.filter(([k]) => k !== 'reportes' || esJefe());
+  const nav = NAV.filter(([k]) => puede(k));
+  if (!puede(p)) { App.page = nav[0][0]; return render(); }
   $('#app').innerHTML = `<div class="shell"><aside class="side"><div class="brand"><img src="mark.png"><div><b>Muebles La Pascua</b><small>Gerencia</small></div></div>
   <nav class="nav">${nav.map(([k, l, i]) => `<a href="#${k}" class="${k === p ? 'on' : ''}" onclick="App.go('${k}');return false">${ico(i)}${l}</a>`).join('')}</nav>
   <div class="foot">Tasa BCV <b style="color:var(--amber2)">${db().tasa.valor}</b> Bs/$<br><span class="kbd">Ctrl K</span> búsqueda rápida</div></aside>
   <main class="main"><div class="top"><h1>${t}<small>${s}</small></h1><span class="pill hide-m" onclick="App.palette()">🔎 Buscar <span class="kbd">Ctrl K</span></span><div class="cur"><button class="${CUR === 'USD' ? 'on' : ''}" onclick="App.setCur('USD')">$</button><button class="${CUR === 'VES' ? 'on' : ''}" onclick="App.setCur('VES')">Bs</button></div></div>
   <div id="view">${V[p]()}</div></main></div>
   <nav class="dock">${nav.map(([k, l, i]) => `<a href="#${k}" class="${k === p ? 'on' : ''}" onclick="App.go('${k}');return false">${ico(i)}${l}</a>`).join('')}</nav>
-  ${p !== 'vender' ? `<button class="fab" title="Nueva venta" onclick="App.go('vender')">+</button>` : ''}`;
+  ${p !== 'vender' && puede('vender') ? `<button class="fab" title="Nueva venta" onclick="App.go('vender')">+</button>` : ''}`;
   if (p === 'clientes' && window._qc) { const i = document.querySelector('#qc'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
   if (p === 'vender' && window._q) { const i = document.querySelector('#view input'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
 }
