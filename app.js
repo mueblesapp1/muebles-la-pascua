@@ -193,17 +193,20 @@ const App = window.App = {
     const usdDe = x => x.moneda === 'Bs' ? (+x.monto || 0) / T() : (+x.monto || 0);
     const pagoMsg = () => { const pag = pagos.reduce((a, x) => a + usdDe(x), 0), f = cobrar - pag, m = o.querySelector('#pagoMsg');
       m.innerHTML = pagos.length === 1 && !pagos[0].monto ? `<span style="color:var(--mut)">Se cobra todo con ${pagos[0].metodo}</span>` : Math.abs(f) < 0.01 ? '<span class="up">✓ Pago completo</span>' : f > 0 ? `<span class="down">Faltan ${fmt(f, 'USD')} · ${fmt(f, 'VES')}</span>` : `<span class="down">Sobran ${fmt(-f, 'USD')} (vuelto)</span>`; };
+    const autoFill = () => { const a = pagos.find(x => x.auto); if (!a) return; const resto = Math.max(0, cobrar - pagos.filter(x => x !== a).reduce((s, x) => s + usdDe(x), 0)); a.monto = (a.moneda === 'Bs' ? resto * T() : resto).toFixed(2); const el = o.querySelector(`#pagos input[data-i="${pagos.indexOf(a)}"]`); if (el) el.value = a.monto; };
     const drawPagos = () => {
+      if (pagos.length > 1) autoFill();
       const box = o.querySelector('#pagos');
       box.innerHTML = pagos.map((x, i) => `<div style="display:flex;gap:6px;margin-bottom:6px"><select class="in" data-i="${i}" data-k="metodo" style="flex:1.4">${METS.map(m => `<option ${m === x.metodo ? 'selected' : ''}>${m}</option>`).join('')}</select><select class="in" data-i="${i}" data-k="moneda" style="width:70px"><option ${x.moneda === '$' ? 'selected' : ''}>$</option><option ${x.moneda === 'Bs' ? 'selected' : ''}>Bs</option></select><input class="in" data-i="${i}" data-k="monto" type="number" step="0.01" inputmode="decimal" placeholder="${pagos.length === 1 ? 'Todo' : 'Monto'}" value="${x.monto}" style="flex:1">${pagos.length > 1 ? `<button class="pill" data-del="${i}">✕</button>` : ''}</div>`).join('');
-      box.querySelectorAll('[data-k]').forEach(el => el.oninput = el.onchange = () => { const x = pagos[el.dataset.i]; x[el.dataset.k] = el.value; if (el.dataset.k === 'metodo') { x.moneda = /\$|Zelle|Binance/.test(el.value) ? '$' : 'Bs'; drawPagos(); } else if (el.dataset.k === 'moneda') drawPagos(); else pagoMsg(); });
-      box.querySelectorAll('[data-del]').forEach(el => el.onclick = () => { pagos.splice(+el.dataset.del, 1); drawPagos(); });
+      box.querySelectorAll('[data-k]').forEach(el => el.oninput = el.onchange = () => { const x = pagos[el.dataset.i]; x[el.dataset.k] = el.value; if (el.dataset.k === 'monto') { x.auto = false; if (!pagos.some(y => y.auto)) { const last = pagos.at(-1); if (last !== x) last.auto = true; } autoFill(); } if (el.dataset.k === 'metodo') { x.moneda = /\$|Zelle|Binance/.test(el.value) ? '$' : 'Bs'; drawPagos(); } else if (el.dataset.k === 'moneda') drawPagos(); else pagoMsg(); });
+      box.querySelectorAll('[data-del]').forEach(el => el.onclick = () => { pagos.splice(+el.dataset.del, 1); if (pagos.length > 1 && !pagos.some(y => y.auto)) pagos.at(-1).auto = true; if (pagos.length === 1) pagos[0].auto = false; drawPagos(); });
       pagoMsg();
     };
     o.querySelector('#addPago').onclick = () => {
-      if (pagos.length === 1 && !pagos[0].monto) pagos[0].monto = '';
-      const pag = pagos.reduce((a, x) => a + usdDe(x), 0), f = Math.max(0, cobrar - pag);
-      pagos.push({ metodo: 'Efectivo $', moneda: '$', monto: pagos[0].monto ? f.toFixed(2) : '' }); drawPagos();
+      pagos.forEach(x => x.auto = false);
+      const usados = pagos.map(x => x.metodo), m = METS.find(x => !usados.includes(x)) || 'Efectivo $';
+      pagos.push({ metodo: m, moneda: /\$|Zelle|Binance/.test(m) ? '$' : 'Bs', monto: '', auto: true }); drawPagos();
+      o.querySelector(`#pagos input[data-i="0"]`)?.focus();
     };
     const seg = (id, key, num) => o.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => { o.querySelectorAll(`#${id} button`).forEach(x => x.classList.remove('on')); b.classList.add('on'); st[key] = num ? +b.dataset.v : b.dataset.v; calc(); });
     seg('sTipo', 'tipo'); seg('sPct', 'pct', true);
