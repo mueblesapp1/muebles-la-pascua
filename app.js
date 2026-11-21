@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=25';
+import { store, today, daysAgo } from './store.js?v=26';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -609,7 +609,7 @@ const App = window.App = {
     <div class="fld"><label>Proveedor</label><div style="display:flex;gap:6px"><select class="in" id="kP" style="flex:1">${db().proveedores.map(p => `<option value="${p.id}" ${p.id === st.prov ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('') || '<option value="">— Crea un proveedor —</option>'}</select><button class="pill" id="kPn">+ Nuevo</button></div></div>
     <div class="row2"><div class="fld"><label>Documento</label><select class="in" id="kD"><option value="factura" ${st.doc === 'factura' ? 'selected' : ''}>Factura</option><option value="nota" ${st.doc === 'nota' ? 'selected' : ''}>Nota de entrega</option></select></div><div class="fld"><label>Número</label><input class="in" id="kN" value="${esc(st.num)}" placeholder="Ej. 000123"></div></div>
     <div class="row2"><div class="fld"><label>Fecha</label><input class="in" id="kF" type="date" value="${st.fecha}"></div><div class="fld"><label>Condición</label><select class="in" id="kC"><option value="contado" ${st.cond === 'contado' ? 'selected' : ''}>Contado</option><option value="credito" ${st.cond === 'credito' ? 'selected' : ''}>Crédito</option></select></div></div>
-    <div class="fld" id="kCx">${st.cond === 'credito' ? `<label>Días de crédito</label><input class="in" id="kV" type="number" inputmode="numeric" value="${st.dias}">` : `<label>Pagado con</label><select class="in" id="kM">${METS.map(m => `<option ${m === st.met ? 'selected' : ''}>${m}</option>`).join('')}</select>`}</div>
+    <div class="fld" id="kCx">${st.cond === 'credito' ? `<label>Días de crédito</label><input class="in" id="kV" type="number" inputmode="numeric" value="${st.dias}">` : ''}</div>
     <datalist id="kL">${db().productos.filter(p => !p.varios).map(p => `<option value="${esc(p.nombre)}">`).join('')}</datalist>
     <h3 style="margin:16px 0 8px">Productos</h3><div id="kI"></div><button class="pill" id="kAdd" style="margin-bottom:14px">+ Agregar producto</button>
     <label style="display:flex;gap:8px;align-items:center;margin-bottom:12px;font-size:14px"><input type="checkbox" id="kU" ${st.upd ? 'checked' : ''}> Actualizar costo y precio de venta en el inventario</label>
@@ -654,7 +654,7 @@ const App = window.App = {
       const t = +total().toFixed(2), vence = st.cond === 'credito' ? new Date(new Date(st.fecha + 'T12:00').getTime() + st.dias * 864e5).toISOString().slice(0, 10) : null;
       e.target.disabled = true; e.target.textContent = 'Guardando…';
       try {
-        const c = await store.addCompra({ proveedor_id: st.prov, doc_tipo: st.doc, doc_numero: st.num.trim() || null, fecha: st.fecha, condicion: st.cond, vence, metodo: st.cond === 'contado' ? st.met : null, nota: st.nota.trim() || null, actualizar_costo: st.upd, pagos: st.cond === 'contado' ? [{ metodo: st.met, moneda: '$', monto: t, usd: t }] : null, items: its.map(i => ({ producto_id: i.pid || null, nombre: i.nombre.trim(), categoria: i.cat, cant: +i.cant, costo: +i.costo, precio: i.precio === '' ? null : +i.precio })) });
+        const c = await store.addCompra({ proveedor_id: st.prov, doc_tipo: st.doc, doc_numero: st.num.trim() || null, fecha: st.fecha, condicion: st.cond, vence, metodo: null, nota: st.nota.trim() || null, actualizar_costo: st.upd, pagos: null, items: its.map(i => ({ producto_id: i.pid || null, nombre: i.nombre.trim(), categoria: i.cat, cant: +i.cant, costo: +i.costo, precio: i.precio === '' ? null : +i.precio })) });
         closeSheet(); render(); toast(`Compra #${c.numero} guardada · ${its.reduce((a, i) => a + +i.cant, 0)} uds al inventario ✅`);
       } catch (err) { toast('Error: ' + err.message); e.target.disabled = false; e.target.textContent = 'Guardar compra'; }
     };
@@ -702,7 +702,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=25'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=26'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
