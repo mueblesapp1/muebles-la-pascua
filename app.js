@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=28';
+import { store, today, daysAgo } from './store.js?v=29';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -183,7 +183,12 @@ V.ajustes = () => `<div class="grid">
   ${esJefe() ? `<div class="card c6"><h3>Categorías</h3><div class="chips">${CATS().map((c, k) => `<span class="chip">${esc(c)}<button onclick="App.catDel(${k})" title="Quitar">×</button></span>`).join('')}</div><div class="row2" style="margin-top:12px"><input class="in" id="catIn" placeholder="Nueva categoría"><button class="btn pri" onclick="App.catAdd()">+ Agregar</button></div></div>` : ''}
   <div class="card c6"><h3>Respaldo</h3><p style="color:var(--mut);margin-bottom:14px">Descarga toda la base de datos en un Excel, una hoja por tabla.</p><button class="btn pri" onclick="App.respaldar()">⬇ Respaldar ahora</button></div>
   ${rol() === 'dueno' ? `<div class="card c6"><h3>Usuarios <button class="pill" onclick="App.userForm()">+ Nuevo usuario</button></h3>${db().perfiles.map(u => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:8px"><span>${esc(u.nombre)}<br><small style="color:var(--mut)">${esc(u.email || '')}</small></span>${u.id === db().usuario.id ? '<span class="tag t-vi">Dueño (tú)</span>' : `<span style="display:flex;gap:6px;align-items:center"><span class="tag ${u.activo ? 't-in' : 't-bad'}">${u.activo ? u.rol : 'Bloqueado'}</span><button class="pill" onclick="App.userForm('${u.id}')">Editar</button></span>`}</div>`).join('')}<p style="color:var(--mut);font-size:12px;margin-top:10px">Solo tú creas usuarios y eliges a qué módulos entra cada uno.</p>
-  <button class="btn gh block" style="margin-top:16px" onclick="App.borrarDemo()">🧹 Borrar datos de demostración</button></div>` : ''}
+</div>
+  <div class="card c6"><h3>Borrar datos</h3><p style="color:var(--mut);margin-bottom:12px">Antes de borrar, haz un respaldo. Esto no se puede deshacer.</p>
+  <button class="btn gh block" onclick="App.borrarDemo()">🧹 Borrar datos de demostración</button>
+  <button class="btn gh block" style="margin-top:10px" onclick="App.limpiar('movimientos')">🗂 Borrar todo excepto inventario, clientes y usuarios</button>
+  <button class="btn gh block" style="margin-top:10px;color:var(--bad);border-color:var(--bad)" onclick="App.limpiar('todo')">⚠️ Borrar base de datos completa</button>
+  <small style="display:block;margin-top:10px;color:var(--mut)">La configuración (tasa, Cashea, ticket, categorías) y los usuarios siempre se quedan.</small></div>` : ''}
   <div class="card c6"><h3>Sesión</h3><p style="margin-bottom:12px">${esc(db().usuario.nombre)} · <span class="tag t-in">${rol()}</span></p><button class="btn gh" onclick="App.logout()">Cerrar sesión</button></div></div>`;
 
 // ---------- cuentas por cobrar ----------
@@ -703,7 +708,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=28'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=29'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -733,6 +738,12 @@ const App = window.App = {
   },
   async setRol(id, r) { await store.setPerfil(id, { rol: r }); toast('Rol actualizado'); },
   async toggleUser(id, a) { await store.setPerfil(id, { activo: a }); render(); },
+  async limpiar(modo) {
+    const txt = modo === 'todo' ? 'Se borran ventas, abonos, compras, proveedores, gastos, clientes y todo el inventario. Quedan solo la configuración y los usuarios.' : 'Se borran ventas, abonos, compras, proveedores y gastos. Se quedan el inventario (con sus existencias actuales), los clientes y los usuarios.';
+    if (!confirm(txt + '\n\n¿Seguro? No se puede deshacer.')) return;
+    const w = prompt('Para confirmar escribe BORRAR'); if ((w || '').trim().toUpperCase() !== 'BORRAR') return toast('Cancelado');
+    try { await store.limpiar(modo); cart = []; render(); toast('Datos borrados ✅'); } catch (e) { toast('Error: ' + e.message); }
+  },
   async borrarDemo() { if (!confirm('¿Borrar todos los datos de demostración? Tus datos reales se quedan.')) return; await store.borrarDemo(); render(); toast('Demo borrada'); },
   async repPDF() {
     toast('Generando PDF…');

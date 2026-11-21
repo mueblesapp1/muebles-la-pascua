@@ -73,6 +73,7 @@ export const store = {
   async crearUsuario(u) { ok(await sb.rpc('crear_usuario', { p_email: u.email, p_pass: u.pass, p_nombre: u.nombre, p_rol: u.rol, p_modulos: u.modulos })); await this.load(); },
   async cambiarClave(id, pass) { ok(await sb.rpc('cambiar_clave', { p_uid: id, p_pass: pass })); },
   async setPerfil(id, ch) { ok(await sb.from('perfiles').update(ch).eq('id', id)); await this.load(); },
+  async limpiar(modo) { ok(await sb.rpc('limpiar_datos', { p_modo: modo })); await this.load(); },
   async borrarDemo() { ok(await sb.from('ventas').delete().eq('demo', true)); ok(await sb.from('gastos').delete().eq('demo', true)); ok(await sb.from('productos').delete().eq('demo', true)); ok(await sb.from('clientes').delete().eq('demo', true)); await this.load(); },
   live(cb) { sb.channel('cambios').on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'abonos' }, cb).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'venta_items' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'compras' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'pagos_proveedor' }, cb).subscribe(); },
 };
