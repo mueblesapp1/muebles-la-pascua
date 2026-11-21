@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=21';
+import { store, today, daysAgo } from './store.js?v=22';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -235,7 +235,7 @@ V.ventas = () => {
 };
 
 // ---------- despacho ----------
-const DS = window.DS = { tab: 'pend', q: '' };
+const DS = window.DS = { tab: 'pend', q: '', sel: {} };
 V.despacho = () => {
   const cli = id => db().clientes.find(c => c.id === id), q = DS.q.trim().toLowerCase();
   const all = db().ventas.filter(v => (v.items || []).length), pend = all.filter(v => v.items.some(i => !i.despachado)), done = all.filter(v => v.items.every(i => i.despachado));
@@ -249,8 +249,8 @@ V.despacho = () => {
   <div class="card c12" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="cur"><button class="${DS.tab === 'pend' ? 'on' : ''}" onclick="DS.tab='pend';App.go('despacho')">⏳ Pendientes (${pend.length})</button><button class="${DS.tab === 'done' ? 'on' : ''}" onclick="DS.tab='done';App.go('despacho')">✅ Despachadas</button></div><input class="in" id="dq" placeholder="🔎 Cliente, # nota o producto" value="${esc(DS.q)}" oninput="DS.q=this.value;App.go('despacho');setTimeout(()=>{const i=document.querySelector('#dq');i.focus();i.setSelectionRange(i.value.length,i.value.length)})" style="flex:1;min-width:180px;max-width:340px"></div>
   ${lst.map(v => { const c = cli(v.clienteId), n = v.items.filter(i => i.despachado).length; return `<div class="card c6"><h3><span>#${v.numero} · ${esc(c?.nombre || 'Mostrador')}</span><span class="tag ${n === v.items.length ? 't-ok' : n ? 't-am' : 't-bad'}">${n}/${v.items.length}</span></h3>
    <small style="color:var(--mut)">${fdate(v.fecha)}${c?.telefono ? ' · ' + esc(c.telefono) : ''}${c?.direccion ? '<br>📍 ' + esc(c.direccion) : ''}</small>
-   <div style="margin-top:8px">${v.items.map(i => `<label class="dsp ${i.despachado ? 'ok' : ''}"><input type="checkbox" ${i.despachado ? 'checked' : ''} onchange="App.despachar('${v.id}','${i.id}',this.checked)"><span><b>${i.cant} × ${esc(i.nombre)}</b>${i.despachado ? `<small>Despachado ${i.despachado_en ? new Date(i.despachado_en).toLocaleString('es-VE', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''}${i.despachado_por ? ' · ' + esc(i.despachado_por) : ''}</small>` : ''}</span></label>`).join('')}</div>
-   <div class="row2" style="margin-top:10px">${n < v.items.length ? `<button class="btn pri" onclick="App.despacharTodo('${v.id}')">✓ Despachar todo</button>` : '<span></span>'}<button class="btn gh" onclick="App.verVenta('${v.id}')">Ver venta</button></div></div>`; }).join('') || `<div class="card c12"><div class="empty">${DS.tab === 'pend' ? (q ? 'Nada coincide' : 'No hay nada por despachar 🎉') : 'Aún no hay ventas despachadas'}</div></div>`}</div>`;
+   <div style="margin-top:8px">${v.items.map(i => `<label class="dsp ${i.despachado ? 'ok' : ''}"><input type="checkbox" ${i.despachado || DS.sel[i.id] ? 'checked' : ''} ${i.despachado ? 'disabled' : ''} onchange="DS.sel['${i.id}']=this.checked;App.go('despacho')"><span><b>${i.cant} × ${esc(i.nombre)}</b>${i.despachado ? `<small>Despachado ${i.despachado_en ? new Date(i.despachado_en).toLocaleString('es-VE', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''}${i.despachado_por ? ' · ' + esc(i.despachado_por) : ''}</small>` : ''}</span></label>`).join('')}</div>
+   <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap" class="dspb">${(() => { const pi = v.items.filter(i => !i.despachado), ns = pi.filter(i => DS.sel[i.id]).length; return pi.length ? `<button class="btn pri" ${ns ? '' : 'disabled style="opacity:.45"'} onclick="App.despacharSel('${v.id}')">🚚 Despachado${ns ? ' (' + ns + ')' : ''}</button>${pi.length > 1 ? `<button class="btn gh" onclick="App.despacharTodo('${v.id}')">✓ Despachar todo</button>` : ''}` : ''; })()}<button class="btn gh" onclick="App.verVenta('${v.id}')">Ver venta</button></div></div>`; }).join('') || `<div class="card c12"><div class="empty">${DS.tab === 'pend' ? (q ? 'Nada coincide' : 'No hay nada por despachar 🎉') : 'Aún no hay ventas despachadas'}</div></div>`}</div>`;
 };
 
 // ---------- reportes ----------
@@ -414,6 +414,13 @@ const App = window.App = {
     render(); if (okk && v.items.every(i => i.despachado)) toast(`Venta #${v.numero} despachada completa ✅`);
     try { await store.despachar(iid, okk); } catch (e) { toast('Error: ' + e.message); await store.load(); render(); }
   },
+  async despacharSel(vid) {
+    const v = db().ventas.find(x => x.id === vid), sel = v.items.filter(i => !i.despachado && DS.sel[i.id]);
+    if (!sel.length) return toast('Marca los productos que salieron');
+    sel.forEach(it => { delete DS.sel[it.id]; Object.assign(it, { despachado: true, despachado_en: new Date().toISOString(), despachado_por: db().usuario.nombre }); });
+    render(); toast(v.items.every(i => i.despachado) ? `Venta #${v.numero} despachada completa ✅` : `${sel.length} producto(s) despachado(s)`);
+    try { await Promise.all(sel.map(i => store.despachar(i.id, true))); } catch (e) { toast('Error: ' + e.message); await store.load(); render(); }
+  },
   async despacharTodo(vid) {
     const v = db().ventas.find(x => x.id === vid), pend = v.items.filter(i => !i.despachado);
     pend.forEach(it => Object.assign(it, { despachado: true, despachado_en: new Date().toISOString(), despachado_por: db().usuario.nombre })); render(); toast(`Venta #${v.numero} despachada ✅`);
@@ -546,7 +553,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=21'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=22'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
