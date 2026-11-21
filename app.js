@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=12';
+import { store, today, daysAgo } from './store.js?v=13';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -199,7 +199,7 @@ V.reportes = () => {
   const r = repData(), cli = id => db().clientes.find(c => c.id === id)?.nombre || 'Sin cliente', k = (t, v, s = '') => `<div class="card kpi c3"><h3>${t}</h3><div class="v">${v}</div><div class="s">${s}</div></div>`;
   const per = `<div class="card c12"><div class="chips">${[['hoy', 'Hoy'], ['semana', 'Esta semana'], ['mes', 'Este mes'], ['rango', 'Rango']].map(([m, l]) => `<button class="pill ${RP.modo === m ? 'on' : ''}" onclick="RP.modo='${m}';App.go('reportes')">${l}</button>`).join('')}</div>
   ${RP.modo === 'rango' ? `<div class="row2" style="margin-top:12px"><div class="fld"><label>Desde</label><input class="in" type="date" value="${RP.d}" onchange="RP.d=this.value;App.go('reportes')"></div><div class="fld"><label>Hasta</label><input class="in" type="date" value="${RP.h}" onchange="RP.h=this.value;App.go('reportes')"></div></div>` : ''}
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap"><div class="cur"><button class="${RP.tab === 'ventas' ? 'on' : ''}" onclick="RP.tab='ventas';App.go('reportes')">Ventas</button><button class="${RP.tab === 'cashea' ? 'on' : ''}" onclick="RP.tab='cashea';App.go('reportes')">Cashea</button></div><span class="sub" style="margin:0">${fdate(r.d)}${r.d !== r.h ? ' al ' + fdate(r.h) : ''} · ${r.vs.length} ventas</span><button class="btn gh" onclick="App.repExcel()">⬇ Excel</button></div></div>`;
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap"><div class="cur"><button class="${RP.tab === 'ventas' ? 'on' : ''}" onclick="RP.tab='ventas';App.go('reportes')">Ventas</button><button class="${RP.tab === 'cashea' ? 'on' : ''}" onclick="RP.tab='cashea';App.go('reportes')">Cashea</button></div><span class="sub" style="margin:0">${fdate(r.d)}${r.d !== r.h ? ' al ' + fdate(r.h) : ''} · ${r.vs.length} ventas</span><span style="display:flex;gap:8px"><button class="btn gh" onclick="App.repPDF()">🖨 PDF</button><button class="btn gh" onclick="App.repExcel()">⬇ Excel</button></span></div></div>`;
   if (RP.tab === 'cashea') return `<div class="grid">${per}
   ${k('Vendido con Cashea', fmt(r.tk), `${r.cas.length} ventas · ${fmt(r.tk, 'VES')}`)}${k('Inicial cobrada', fmt(r.ini), 'Entró a tu caja')}${k('Financiado', fmt(r.fin), `Comisión ${fmt(r.com)}`)}${k('Neto a recibir', fmt(r.neto), `Recibido ${fmt(r.liq)} · pendiente ${fmt(r.pend)}`)}
   ${r.venc.length ? `<div class="card c12" style="border-color:rgba(255,107,107,.5)"><h3>⚠️ ${r.venc.length} liquidaciones atrasadas</h3><p>${fmt(r.venc.reduce((a, v) => a + v.netoCashea, 0))} que Cashea ya debió pagarte.</p></div>` : ''}
@@ -388,7 +388,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=12'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=13'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -396,6 +396,35 @@ const App = window.App = {
   async setRol(id, r) { await store.setPerfil(id, { rol: r }); toast('Rol actualizado'); },
   async toggleUser(id, a) { await store.setPerfil(id, { activo: a }); render(); },
   async borrarDemo() { if (!confirm('¿Borrar todos los datos de demostración? Tus datos reales se quedan.')) return; await store.borrarDemo(); render(); toast('Demo borrada'); },
+  async repPDF() {
+    toast('Generando PDF…');
+    try {
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('https://esm.sh/jspdf@2.5.2'), import('https://esm.sh/jspdf-autotable@3.8.4')]);
+      const r = repData(), tasa = db().tasa.valor, cli = id => db().clientes.find(c => c.id === id)?.nombre || 'Sin cliente', $f = n => '$' + (+n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), bs = n => 'Bs ' + ((+n || 0) * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const doc = new jsPDF({ unit: 'pt', format: 'letter' }), W = doc.internal.pageSize.getWidth(), nav = [15, 42, 71], amb = [242, 159, 5];
+      const lg = await logoImg(); if (lg) { const c = document.createElement('canvas'); c.width = lg.width; c.height = lg.height; c.getContext('2d').drawImage(lg, 0, 0); doc.addImage(c.toDataURL('image/jpeg', .9), 'JPEG', 40, 28, 110, 110 * lg.height / lg.width); }
+      const tk = TK(); doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...nav); doc.text(RP.tab === 'cashea' ? 'Reporte Cashea' : 'Reporte de ventas', W - 40, 46, { align: 'right' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90);
+      doc.text([`${tk.nombre}${tk.rif ? ' · RIF ' + tk.rif : ''}`, `Período: ${fdate(r.d)}${r.d !== r.h ? ' al ' + fdate(r.h) : ''} ${r.d.slice(0, 4)}`, `Tasa BCV: ${tasa} Bs/$ · Generado ${new Date().toLocaleString('es-VE')}`], W - 40, 64, { align: 'right' });
+      let y = 110; const sec = t => { y = (doc.lastAutoTable?.finalY ?? y) + 24; if (y > 700) { doc.addPage(); y = 50; } doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...nav); doc.text(t, 40, y); y += 8; };
+      const tb = (head, body, o = {}) => autoTable(doc, { startY: y, head: [head], body: body.length ? body : [[{ content: 'Sin datos', colSpan: head.length }]], theme: 'striped', headStyles: { fillColor: nav, textColor: 255 }, styles: { fontSize: 9, cellPadding: 5 }, margin: { left: 40, right: 40 }, ...o });
+      doc.setDrawColor(...amb); doc.setLineWidth(2); doc.line(40, 100, W - 40, 100);
+      if (RP.tab === 'cashea') {
+        sec('Resumen'); tb(['Concepto', 'Monto $', 'Monto Bs'], [['Ventas con Cashea (' + r.cas.length + ')', $f(r.tk), bs(r.tk)], ['Inicial cobrada', $f(r.ini), bs(r.ini)], ['Financiado por Cashea', $f(r.fin), bs(r.fin)], ['Comisión Cashea', $f(r.com), bs(r.com)], ['Neto a recibir', $f(r.neto), bs(r.neto)], ['Recibido', $f(r.liq), bs(r.liq)], ['Pendiente', $f(r.pend), bs(r.pend)]]);
+        sec('Detalle'); tb(['#', 'Fecha', 'Cliente', 'Total', 'Inicial', 'Financiado', 'Comisión', 'Neto', 'Estado'], r.cas.map(v => [v.numero, fdate(v.fecha), cli(v.clienteId), $f(v.total), $f(v.inicial), $f(v.financiado), $f(v.comision), $f(v.netoCashea), v.liquidado ? 'Recibido' : (v.liquidaEstimada < today() ? 'Atrasado ' : 'Pend. ') + (v.liquidaEstimada ? fdate(v.liquidaEstimada) : '')]), { styles: { fontSize: 8, cellPadding: 4 } });
+      } else {
+        const un = r.total - r.costo - r.com - r.gas;
+        sec('Resumen'); tb(['Concepto', 'Monto $', 'Monto Bs'], [['Total vendido (' + r.vs.length + ' ventas)', $f(r.total), bs(r.total)], ['Contado (' + r.cont.length + ')', $f(r.tc), bs(r.tc)], ['Crédito Cashea (' + r.cas.length + ')', $f(r.tk), bs(r.tk)], ['Inicial Cashea cobrada', $f(r.ini), bs(r.ini)], ['Costo de mercancía', $f(r.costo), bs(r.costo)], ['Comisión Cashea', $f(r.com), bs(r.com)], ['Gastos', $f(r.gas), bs(r.gas)], [{ content: 'Utilidad neta', styles: { fontStyle: 'bold' } }, { content: $f(un), styles: { fontStyle: 'bold' } }, bs(un)]]);
+        if (RP.modo !== 'hoy') { sec('Ventas por día'); tb(['Día', 'Ventas', 'Contado', 'Cashea', 'Total'], Object.entries(r.dias).map(([f, x]) => [fdate(f), x.n, $f(x.c), $f(x.k), $f(x.t)])); }
+        sec('Cobrado por forma de pago'); tb(['Forma de pago', 'Monto $', 'Monto Bs'], Object.entries(r.met).sort((a, b) => b[1] - a[1]).map(([m, t]) => [m, $f(t), bs(t)]));
+        sec('Productos vendidos'); tb(['Producto', 'Unidades', 'Vendido', 'Ganancia'], Object.entries(r.prod).sort((a, b) => b[1].t - a[1].t).map(([n, x]) => [n, x.n, $f(x.t), $f(x.g)]));
+        sec('Detalle de ventas'); tb(['#', 'Fecha', 'Cliente', 'Tipo', 'Pago', 'Total'], r.vs.map(v => [v.numero, fdate(v.fecha), cli(v.clienteId), v.tipo === 'cashea' ? 'Cashea' : 'Contado', v.metodo || '', $f(v.total)]));
+      }
+      const n = doc.getNumberOfPages(); for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(`${tk.nombre} · Página ${i} de ${n}`, W / 2, doc.internal.pageSize.getHeight() - 20, { align: 'center' }); }
+      const name = `Reporte ${RP.tab === 'cashea' ? 'Cashea' : 'ventas'} ${r.d}${r.d !== r.h ? ' a ' + r.h : ''}.pdf`, blob = doc.output('blob'), f = new File([blob], name, { type: 'application/pdf' });
+      if (navigator.canShare?.({ files: [f] }) && /iPhone|iPad|Android/i.test(navigator.userAgent)) { try { await navigator.share({ files: [f], title: name }); } catch (e) { } } else doc.save(name);
+    } catch (e) { toast('No pude generar el PDF: ' + e.message); }
+  },
   async repExcel() {
     const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs'), r = repData(), wb = XLSX.utils.book_new(), tasa = db().tasa.valor, cli = id => db().clientes.find(c => c.id === id)?.nombre || '';
     const add = (n, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ Nota: 'Sin datos' }]), n);
