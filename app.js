@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=13';
+import { store, today, daysAgo } from './store.js?v=14';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -41,7 +41,7 @@ function metricas(n = 30) {
   const costo = sum(vs, costoVenta), comision = sum(vs, v => v.comision);
   const gastos = sum(db().gastos.filter(g => g.fecha >= daysAgo(n - 1)), g => g.monto);
   const porCobrar = sum(db().ventas.filter(v => v.tipo === 'cashea' && !v.liquidado), v => v.netoCashea);
-  const vencido = db().ventas.filter(v => v.tipo === 'cashea' && !v.liquidado && v.liquidaEstimada < today());
+  const vencido = [];
   const cashea = vs.filter(v => v.tipo === 'cashea');
   const porProd = {}, porVend = {};
   vs.forEach(v => { (v.items || []).forEach(i => { const p = porProd[i.nombre] ||= { n: 0, ing: 0, gan: 0 }; p.n += i.cant; p.ing += i.precio * i.cant; p.gan += (i.precio - i.costo) * i.cant; }); const k = v.vendedor || '—'; porVend[k] = (porVend[k] || 0) + v.total; });
@@ -99,7 +99,7 @@ V.tablero = () => {
    <div class="tt"><small>Total del día</small><b>${fmt(sum(hoy))}</b><span>${hoy.length} ventas · ${fmt(sum(hoy), 'VES')}</span></div></div></div>
   <div class="card kpi hero c6"><h3>Ventas últimos 30 días <span class="tag ${d >= 0 ? 't-ok' : 't-bad'}">${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(0)}%</span></h3><div class="v">${fmt(m.ventas)}</div><div class="s">${m.vs.length} ventas · ticket promedio ${fmt(m.ticket)}</div></div>
   <div class="card kpi c3"><div class="glow" style="background:var(--ok)"></div><h3>Utilidad neta</h3><div class="v ${m.utilidad >= 0 ? 'up' : 'down'}">${fmt(m.utilidad)}</div><div class="s">Margen bruto ${(m.margen * 100).toFixed(0)}% · gastos ${fmt(m.gastos)}</div></div>
-  <div class="card kpi c3"><div class="glow" style="background:var(--violet)"></div><h3>Cashea te debe</h3><div class="v">${fmt(m.porCobrar)}</div><div class="s">${m.vencido.length ? `<span class="down">${m.vencido.length} atrasadas</span>` : 'Todo al día'}</div></div>
+  <div class="card kpi c3"><div class="glow" style="background:var(--violet)"></div><h3>Cashea te debe</h3><div class="v">${fmt(m.porCobrar)}</div><div class="s">${db().ventas.filter(v => v.tipo === 'cashea' && !v.liquidado).length} ventas pendientes'}</div></div>
   <div class="card c8"><h3>Ventas por día <span class="kbd">30 días</span></h3>${areaChart(m.dias)}</div>
   <div class="card c4"><h3>Forma de venta</h3>${donut([{ k: 'Contado', v: cont, c: '#F5A524' }, { k: 'Cashea', v: m.ventas - cont, c: '#A78BFA' }])}<div class="s" style="margin-top:14px;color:var(--mut);font-size:13px">Inventario a costo: <b style="color:var(--txt)">${fmt(m.stockValor)}</b></div></div>
   <div class="card c7"><h3>✨ Copiloto gerencial</h3>${insights(m).map(([e, bg, t, s]) => `<div class="ins"><div class="dot" style="background:${bg}">${e}</div><div><p>${esc(t)}</p><small>${esc(s)}</small></div></div>`).join('') || '<div class="empty">Registra tus primeras ventas y aquí verás consejos.</div>'}</div>
@@ -128,16 +128,16 @@ V.inventario = () => {
 };
 
 V.cashea = () => {
-  const pend = db().ventas.filter(v => v.tipo === 'cashea' && !v.liquidado).sort((a, b) => a.liquidaEstimada.localeCompare(b.liquidaEstimada));
+  const pend = db().ventas.filter(v => v.tipo === 'cashea' && !v.liquidado).sort((a, b) => a.fecha.localeCompare(b.fecha));
   const liq = db().ventas.filter(v => v.tipo === 'cashea' && v.liquidado).slice(-8).reverse();
-  const tot = pend.reduce((a, v) => a + v.netoCashea, 0), venc = pend.filter(v => v.liquidaEstimada < today());
+  const tot = pend.reduce((a, v) => a + v.netoCashea, 0), rec = db().ventas.filter(v => v.tipo === 'cashea' && v.liquidado && (v.fecha_liquidacion || v.fecha) >= today().slice(0, 8) + '01');
   const cli = id => db().clientes.find(c => c.id === id)?.nombre || '—';
   return `<div class="grid">
   <div class="card kpi hero c4"><h3>Por recibir de Cashea</h3><div class="v">${fmt(tot)}</div><div class="s">${pend.length} ventas pendientes</div></div>
-  <div class="card kpi c4"><h3>Atrasado</h3><div class="v ${venc.length ? 'down' : 'up'}">${fmt(venc.reduce((a, v) => a + v.netoCashea, 0))}</div><div class="s">${venc.length} pasaron la fecha estimada</div></div>
+  <div class="card kpi c4"><h3>Recibido este mes</h3><div class="v up">${fmt(rec.reduce((a, v) => a + v.netoCashea, 0))}</div><div class="s">${rec.length} liquidaciones marcadas</div></div>
   <div class="card kpi c4"><h3>Comisión Cashea</h3><div class="v">${db().config.comisionCashea}%</div><div class="s">Sobre lo financiado · cámbiala en Ajustes</div></div>
-  <div class="card c12"><h3>Liquidaciones pendientes</h3><div style="overflow:auto"><table class="tbl"><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Inicial cobrada</th><th>Financiado</th><th>Neto a recibir</th><th>Estimado</th><th></th></tr></thead><tbody>
-  ${pend.map(v => `<tr><td>${v.numero}</td><td>${fdate(v.fecha)}</td><td>${esc(cli(v.clienteId))}</td><td>${fmt(v.inicial)}</td><td>${fmt(v.financiado)}</td><td><b>${fmt(v.netoCashea)}</b></td><td><span class="tag ${v.liquidaEstimada < today() ? 't-bad' : 't-in'}">${fdate(v.liquidaEstimada)}</span></td><td>${rol() !== 'vendedor' ? `<button class="pill" onclick="App.liquidar('${v.id}')">Marcar recibido</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">Nada pendiente 🎉</td></tr>'}
+  <div class="card c12"><h3>Liquidaciones pendientes</h3><div style="overflow:auto"><table class="tbl"><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Inicial cobrada</th><th>Financiado</th><th>Neto a recibir</th><th>Estado</th><th></th></tr></thead><tbody>
+  ${pend.map(v => `<tr><td>${v.numero}</td><td>${fdate(v.fecha)}</td><td>${esc(cli(v.clienteId))}</td><td>${fmt(v.inicial)}</td><td>${fmt(v.financiado)}</td><td><b>${fmt(v.netoCashea)}</b></td><td><span class="tag t-in">Pendiente</span></td><td>${rol() !== 'vendedor' ? `<button class="pill" onclick="App.liquidar('${v.id}')">Marcar recibido</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">Nada pendiente 🎉</td></tr>'}
   </tbody></table></div></div>
   <div class="card c12"><h3>Recibido recientemente</h3><table class="tbl"><tbody>${liq.map(v => `<tr><td>#${v.numero}</td><td>${esc(cli(v.clienteId))}</td><td>${fmt(v.netoCashea)}</td><td>${v.fechaLiquidacion||v.fecha_liquidacion?fdate(v.fecha_liquidacion):''}</td><td><span class="tag t-ok">Recibido</span></td></tr>`).join('')}</tbody></table></div></div>`;
 };
@@ -192,7 +192,7 @@ function repData() {
   const met = {}; vs.forEach(v => (v.pagos?.length ? v.pagos : [{ metodo: v.metodo || '—', usd: v.inicial }]).forEach(p => met[p.metodo] = (met[p.metodo] || 0) + (+p.usd || 0)));
   const prod = {}; vs.forEach(v => (v.items || []).forEach(i => { const x = prod[i.nombre] ||= { n: 0, t: 0, g: 0 }; x.n += i.cant; x.t += i.precio * i.cant; x.g += (i.precio - (i.costo || 0)) * i.cant; }));
   const costo = S(vs, costoVenta), gas = S(db().gastos.filter(g => g.fecha >= d && g.fecha <= h), g => g.monto);
-  return { d, h, vs, cont, cas, dias, met, prod, total: S(vs, v => v.total), tc: S(cont, v => v.total), tk: S(cas, v => v.total), costo, gas, ini: S(cas, v => v.inicial), fin: S(cas, v => v.financiado), com: S(cas, v => v.comision), neto: S(cas, v => v.netoCashea), liq: S(cas.filter(v => v.liquidado), v => v.netoCashea), pend: S(cas.filter(v => !v.liquidado), v => v.netoCashea), venc: cas.filter(v => !v.liquidado && v.liquidaEstimada < today()) };
+  return { d, h, vs, cont, cas, dias, met, prod, total: S(vs, v => v.total), tc: S(cont, v => v.total), tk: S(cas, v => v.total), costo, gas, ini: S(cas, v => v.inicial), fin: S(cas, v => v.financiado), com: S(cas, v => v.comision), neto: S(cas, v => v.netoCashea), liq: S(cas.filter(v => v.liquidado), v => v.netoCashea), pend: S(cas.filter(v => !v.liquidado), v => v.netoCashea) };
 }
 V.reportes = () => {
   if (!esJefe()) return '<div class="empty">Solo el dueño o un admin ven los reportes.</div>';
@@ -202,8 +202,7 @@ V.reportes = () => {
   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap"><div class="cur"><button class="${RP.tab === 'ventas' ? 'on' : ''}" onclick="RP.tab='ventas';App.go('reportes')">Ventas</button><button class="${RP.tab === 'cashea' ? 'on' : ''}" onclick="RP.tab='cashea';App.go('reportes')">Cashea</button></div><span class="sub" style="margin:0">${fdate(r.d)}${r.d !== r.h ? ' al ' + fdate(r.h) : ''} · ${r.vs.length} ventas</span><span style="display:flex;gap:8px"><button class="btn gh" onclick="App.repPDF()">🖨 PDF</button><button class="btn gh" onclick="App.repExcel()">⬇ Excel</button></span></div></div>`;
   if (RP.tab === 'cashea') return `<div class="grid">${per}
   ${k('Vendido con Cashea', fmt(r.tk), `${r.cas.length} ventas · ${fmt(r.tk, 'VES')}`)}${k('Inicial cobrada', fmt(r.ini), 'Entró a tu caja')}${k('Financiado', fmt(r.fin), `Comisión ${fmt(r.com)}`)}${k('Neto a recibir', fmt(r.neto), `Recibido ${fmt(r.liq)} · pendiente ${fmt(r.pend)}`)}
-  ${r.venc.length ? `<div class="card c12" style="border-color:rgba(255,107,107,.5)"><h3>⚠️ ${r.venc.length} liquidaciones atrasadas</h3><p>${fmt(r.venc.reduce((a, v) => a + v.netoCashea, 0))} que Cashea ya debió pagarte.</p></div>` : ''}
-  <div class="card c12"><h3>Detalle Cashea</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Inicial</th><th>Financiado</th><th>Comisión</th><th>Neto</th><th>Estado</th></tr></thead><tbody>${r.cas.map(v => `<tr><td>${v.numero}</td><td>${fdate(v.fecha)}</td><td>${esc(cli(v.clienteId))}</td><td>${fmt(v.total)}</td><td>${fmt(v.inicial)}</td><td>${fmt(v.financiado)}</td><td>${fmt(v.comision)}</td><td><b>${fmt(v.netoCashea)}</b></td><td>${v.liquidado ? '<span class="tag t-ok">Recibido</span>' : `<span class="tag ${v.liquidaEstimada < today() ? 't-bad' : 't-in'}">${v.liquidaEstimada ? fdate(v.liquidaEstimada) : 'Pendiente'}</span>`}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">Sin ventas Cashea en este período</td></tr>'}</tbody></table></div></div></div>`;
+    <div class="card c12"><h3>Detalle Cashea</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Inicial</th><th>Financiado</th><th>Comisión</th><th>Neto</th><th>Estado</th></tr></thead><tbody>${r.cas.map(v => `<tr><td>${v.numero}</td><td>${fdate(v.fecha)}</td><td>${esc(cli(v.clienteId))}</td><td>${fmt(v.total)}</td><td>${fmt(v.inicial)}</td><td>${fmt(v.financiado)}</td><td>${fmt(v.comision)}</td><td><b>${fmt(v.netoCashea)}</b></td><td>${v.liquidado ? '<span class="tag t-ok">Recibido</span>' : '<span class="tag t-in">Pendiente</span>'}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">Sin ventas Cashea en este período</td></tr>'}</tbody></table></div></div></div>`;
   const tp = Object.entries(r.prod).sort((a, b) => b[1].t - a[1].t).slice(0, 10);
   return `<div class="grid">${per}
   ${k('Total vendido', fmt(r.total), `${r.vs.length} ventas · ${fmt(r.total, 'VES')}`)}${k('Contado', fmt(r.tc), `${r.cont.length} ventas`)}${k('Crédito Cashea', fmt(r.tk), `${r.cas.length} ventas · inicial ${fmt(r.ini)}`)}${k('Utilidad bruta', fmt(r.total - r.costo - r.com), `Gastos ${fmt(r.gas)} · neta ${fmt(r.total - r.costo - r.com - r.gas)}`)}
@@ -388,7 +387,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=13'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=14'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -411,7 +410,7 @@ const App = window.App = {
       doc.setDrawColor(...amb); doc.setLineWidth(2); doc.line(40, 100, W - 40, 100);
       if (RP.tab === 'cashea') {
         sec('Resumen'); tb(['Concepto', 'Monto $', 'Monto Bs'], [['Ventas con Cashea (' + r.cas.length + ')', $f(r.tk), bs(r.tk)], ['Inicial cobrada', $f(r.ini), bs(r.ini)], ['Financiado por Cashea', $f(r.fin), bs(r.fin)], ['Comisión Cashea', $f(r.com), bs(r.com)], ['Neto a recibir', $f(r.neto), bs(r.neto)], ['Recibido', $f(r.liq), bs(r.liq)], ['Pendiente', $f(r.pend), bs(r.pend)]]);
-        sec('Detalle'); tb(['#', 'Fecha', 'Cliente', 'Total', 'Inicial', 'Financiado', 'Comisión', 'Neto', 'Estado'], r.cas.map(v => [v.numero, fdate(v.fecha), cli(v.clienteId), $f(v.total), $f(v.inicial), $f(v.financiado), $f(v.comision), $f(v.netoCashea), v.liquidado ? 'Recibido' : (v.liquidaEstimada < today() ? 'Atrasado ' : 'Pend. ') + (v.liquidaEstimada ? fdate(v.liquidaEstimada) : '')]), { styles: { fontSize: 8, cellPadding: 4 } });
+        sec('Detalle'); tb(['#', 'Fecha', 'Cliente', 'Total', 'Inicial', 'Financiado', 'Comisión', 'Neto', 'Estado'], r.cas.map(v => [v.numero, fdate(v.fecha), cli(v.clienteId), $f(v.total), $f(v.inicial), $f(v.financiado), $f(v.comision), $f(v.netoCashea), v.liquidado ? 'Recibido' : 'Pendiente']), { styles: { fontSize: 8, cellPadding: 4 } });
       } else {
         const un = r.total - r.costo - r.com - r.gas;
         sec('Resumen'); tb(['Concepto', 'Monto $', 'Monto Bs'], [['Total vendido (' + r.vs.length + ' ventas)', $f(r.total), bs(r.total)], ['Contado (' + r.cont.length + ')', $f(r.tc), bs(r.tc)], ['Crédito Cashea (' + r.cas.length + ')', $f(r.tk), bs(r.tk)], ['Inicial Cashea cobrada', $f(r.ini), bs(r.ini)], ['Costo de mercancía', $f(r.costo), bs(r.costo)], ['Comisión Cashea', $f(r.com), bs(r.com)], ['Gastos', $f(r.gas), bs(r.gas)], [{ content: 'Utilidad neta', styles: { fontStyle: 'bold' } }, { content: $f(un), styles: { fontStyle: 'bold' } }, bs(un)]]);
@@ -432,7 +431,7 @@ const App = window.App = {
     add('Ventas', r.vs.map(v => ({ Numero: v.numero, Fecha: v.fecha, Cliente: cli(v.clienteId), Tipo: v.tipo, Pago: v.metodo, 'Total $': v.total, 'Cobrado $': v.inicial, Vendedor: v.vendedor || '' })));
     add('Por día', Object.entries(r.dias).map(([f, x]) => ({ Fecha: f, Ventas: x.n, 'Contado $': x.c, 'Cashea $': x.k, 'Total $': x.t })));
     add('Productos', Object.entries(r.prod).map(([n, x]) => ({ Producto: n, Unidades: x.n, 'Vendido $': x.t, 'Ganancia $': x.g })));
-    add('Cashea', r.cas.map(v => ({ Numero: v.numero, Fecha: v.fecha, Cliente: cli(v.clienteId), 'Total $': v.total, 'Inicial $': v.inicial, 'Financiado $': v.financiado, 'Comisión $': v.comision, 'Neto $': v.netoCashea, Estado: v.liquidado ? 'Recibido' : 'Pendiente', 'Liquida': v.liquidaEstimada })));
+    add('Cashea', r.cas.map(v => ({ Numero: v.numero, Fecha: v.fecha, Cliente: cli(v.clienteId), 'Total $': v.total, 'Inicial $': v.inicial, 'Financiado $': v.financiado, 'Comisión $': v.comision, 'Neto $': v.netoCashea, Estado: v.liquidado ? 'Recibido' : 'Pendiente' })));
     XLSX.writeFile(wb, `Reporte ${r.d}${r.d !== r.h ? ' a ' + r.h : ''}.xlsx`);
   },
   async respaldar() {
