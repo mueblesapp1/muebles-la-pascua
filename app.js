@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=17';
+import { store, today, daysAgo } from './store.js?v=18';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -25,10 +25,11 @@ const I = {
   cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
   cashea: '<path d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.8 7 7s2 3 5 3.6 5 1.6 5 3.9-2.2 3.9-5 3.9-5-1.2-5-3.2"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.8.8 3 2.6 3.5 5.2"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>',
   cog: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
 };
 const ico = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
-const NAV = [['tablero', 'Tablero', 'home'], ['vender', 'Vender', 'sell'], ['inventario', 'Inventario', 'box'], ['cashea', 'Por cobrar', 'cashea'], ['caja', 'Caja', 'cash'], ['clientes', 'Clientes', 'users'], ['reportes', 'Reportes', 'chart'], ['ajustes', 'Ajustes', 'cog']];
+const NAV = [['tablero', 'Tablero', 'home'], ['vender', 'Vender', 'sell'], ['ventas', 'Ventas', 'list'], ['inventario', 'Inventario', 'box'], ['cashea', 'Por cobrar', 'cashea'], ['caja', 'Caja', 'cash'], ['clientes', 'Clientes', 'users'], ['reportes', 'Reportes', 'chart'], ['ajustes', 'Ajustes', 'cog']];
 
 // ---------- cálculos ----------
 const enRango = (v, n) => v.fecha >= daysAgo(n - 1);
@@ -172,7 +173,7 @@ V.ajustes = () => `<div class="grid">
   <div class="card c6"><h3>Tasa del día</h3><div class="kpi"><div class="v">${db().tasa.valor} <small style="font-size:14px;color:var(--mut)">Bs por $</small></div><div class="s">${esc(db().tasa.fuente)} · ${db().tasa.fecha ? fdate(db().tasa.fecha) : ''}</div></div>
   ${esJefe() ? `<div class="row2" style="margin-top:16px"><input class="in" id="tasaIn" type="number" step="0.01" placeholder="Nueva tasa"><button class="btn gh" onclick="App.setTasa()">Guardar manual</button></div><button class="btn gh block" style="margin-top:10px" onclick="App.bcv(true)">⟳ Traer tasa BCV</button>` : ''}</div>
   ${esJefe() ? `<div class="card c6"><h3>Cashea</h3><div class="fld"><label>Comisión sobre lo financiado (%)</label><input class="in" id="comIn" type="number" step="0.1" value="${db().config.comisionCashea}"></div><button class="btn gh" onclick="App.setCom()">Guardar</button></div>` : ''}
-  ${esJefe() ? `<div class="card c6"><h3>Ticket de venta</h3>${(t => `<div class="fld"><label>Nombre del negocio</label><input class="in" id="tkN" value="${esc(t.nombre)}"></div><div class="row2"><div class="fld"><label>RIF</label><input class="in" id="tkR" placeholder="J-" value="${esc(t.rif)}"></div><div class="fld"><label>Teléfono</label><input class="in" id="tkT" value="${esc(t.telefono)}"></div></div><div class="fld"><label>Dirección</label><input class="in" id="tkD" value="${esc(t.direccion)}"></div><div class="fld"><label>Instagram</label><input class="in" id="tkI" placeholder="@" value="${esc(t.instagram)}"></div><div class="fld"><label>Mensaje al pie</label><input class="in" id="tkP" value="${esc(t.pie)}"></div><div class="tkchk">${[['logo', 'Logo'], ['bs', 'Monto en Bs'], ['cliente', 'Datos del cliente'], ['pagos', 'Formas de pago'], ['garantia', 'Garantía'], ['vendedor', 'Vendedor']].map(([k, l]) => `<label><input type="checkbox" id="tk_${k}" ${t[k] ? 'checked' : ''}> ${l}</label>`).join('')}</div><div class="row2"><button class="btn gh" onclick="App.tkPrev()">Vista previa</button><button class="btn pri" onclick="App.tkSave()">Guardar</button></div>`)(TK())}</div>` : ''}
+  ${esJefe() ? `<div class="card c6"><h3>Ticket de venta</h3>${(t => `<div class="fld"><label>Nombre del negocio</label><input class="in" id="tkN" value="${esc(t.nombre)}"></div><div class="row2"><div class="fld"><label>RIF</label><input class="in" id="tkR" placeholder="J-" value="${esc(t.rif)}"></div><div class="fld"><label>Teléfono</label><input class="in" id="tkT" value="${esc(t.telefono)}"></div></div><div class="fld"><label>Dirección</label><input class="in" id="tkD" value="${esc(t.direccion)}"></div><div class="fld"><label>Instagram</label><input class="in" id="tkI" placeholder="@" value="${esc(t.instagram)}"></div><div class="fld"><label>WhatsApp del almacén</label><input class="in" id="tkA" placeholder="0414-0000000" value="${esc(t.almacen || '')}"></div><div class="fld"><label>Mensaje al pie</label><input class="in" id="tkP" value="${esc(t.pie)}"></div><div class="tkchk">${[['logo', 'Logo'], ['bs', 'Monto en Bs'], ['cliente', 'Datos del cliente'], ['pagos', 'Formas de pago'], ['garantia', 'Garantía'], ['vendedor', 'Vendedor']].map(([k, l]) => `<label><input type="checkbox" id="tk_${k}" ${t[k] ? 'checked' : ''}> ${l}</label>`).join('')}</div><div class="row2"><button class="btn gh" onclick="App.tkPrev()">Vista previa</button><button class="btn pri" onclick="App.tkSave()">Guardar</button></div>`)(TK())}</div>` : ''}
   ${esJefe() ? `<div class="card c6"><h3>Categorías</h3><div class="chips">${CATS().map((c, k) => `<span class="chip">${esc(c)}<button onclick="App.catDel(${k})" title="Quitar">×</button></span>`).join('')}</div><div class="row2" style="margin-top:12px"><input class="in" id="catIn" placeholder="Nueva categoría"><button class="btn pri" onclick="App.catAdd()">+ Agregar</button></div></div>` : ''}
   <div class="card c6"><h3>Respaldo</h3><p style="color:var(--mut);margin-bottom:14px">Descarga toda la base de datos en un Excel, una hoja por tabla.</p><button class="btn pri" onclick="App.respaldar()">⬇ Respaldar ahora</button></div>
   ${rol() === 'dueno' ? `<div class="card c6"><h3>Usuarios</h3>${db().perfiles.map(u => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);gap:8px"><span>${esc(u.nombre)} ${u.activo ? '' : '<span class="tag t-am">Pendiente</span>'}</span>${u.id === db().usuario.id ? '<span class="tag t-vi">Dueño (tú)</span>' : `<span style="display:flex;gap:6px"><select class="in" style="padding:6px 8px;width:auto" onchange="App.setRol('${u.id}',this.value)">${['vendedor', 'cajero', 'admin'].map(r => `<option ${u.rol === r ? 'selected' : ''}>${r}</option>`).join('')}</select><button class="pill" onclick="App.toggleUser('${u.id}',${!u.activo})">${u.activo ? 'Bloquear' : 'Activar'}</button></span>`}</div>`).join('')}<p style="color:var(--mut);font-size:12px;margin-top:10px">Tus empleados se registran en la app y aquí los activas.</p>
@@ -210,9 +211,28 @@ V.cashea = () => {
    ${vs.map(v => `<div class="cx"><div><b>#${v.numero}</b> <small>${fdate(v.fecha)}</small><br><small>${esc((v.items || []).map(i => i.nombre).join(', '))}</small><div class="cxb"><span>Total ${fmt(v.total)}</span><span>Inicial ${fmt(v.inicial)}</span><span>Abonado ${fmt(v.abonado)}</span></div></div><div style="text-align:right"><div class="cxs">${fmt(v.saldo)}</div>${v.saldo > 0.009 ? `<button class="btn pri" style="padding:8px 14px;margin-top:6px" onclick="App.abonoForm('${v.id}')">Abonar</button>` : '<span class="tag t-ok">Saldada</span>'}<br><button class="pill" style="margin-top:6px" onclick="App.historial('${v.id}')">Historial</button></div></div>`).join('')}</div>`; }).join('') || `<div class="card c12"><div class="empty">${q || CX.d || CX.h || CX.est !== 'saldo' ? 'Ninguna cuenta coincide con el filtro.' : 'Ningún cliente te debe 🎉'}</div></div>`}</div>`;
 };
 
+// ---------- ventas ----------
+const VF = window.VF = { modo: 'hoy', d: today(), h: today(), tipo: '', q: '', vend: '' };
+const tipoTag = v => `<span class="tag ${v.tipo === 'cashea' ? 't-vi' : v.tipo === 'credito' ? 't-am' : 't-ok'}">${{ cashea: 'Cashea', credito: 'Crédito' }[v.tipo] || 'Contado'}</span>`;
+const waNum = t => t ? '58' + String(t).replace(/\D/g, '').replace(/^58/, '').replace(/^0/, '') : '';
+V.ventas = () => {
+  const [d, h] = VF.modo === 'todas' ? ['0000', '9999'] : rango(VF), q = VF.q.trim().toLowerCase(), cli = id => db().clientes.find(c => c.id === id);
+  const vends = [...new Set(db().ventas.map(v => v.vendedor).filter(Boolean))];
+  const vs = db().ventas.filter(v => v.fecha >= d && v.fecha <= h && (!VF.tipo || v.tipo === VF.tipo) && (!VF.vend || v.vendedor === VF.vend) && (!q || String(v.numero) === q.replace('#', '') || (c => c && (c.nombre.toLowerCase().includes(q) || (c.cedula || '').toLowerCase().includes(q) || (c.telefono || '').includes(q)))(cli(v.clienteId)) || (v.items || []).some(i => i.nombre.toLowerCase().includes(q)))).slice().reverse();
+  const tot = vs.reduce((s, v) => s + v.total, 0);
+  const re = `onchange="App.go('ventas')"`;
+  return `<div class="grid"><div class="card c12"><div class="chips">${[['hoy', 'Hoy'], ['semana', 'Esta semana'], ['mes', 'Este mes'], ['rango', 'Rango'], ['todas', 'Todas']].map(([m, l]) => `<button class="pill ${VF.modo === m ? 'on' : ''}" onclick="VF.modo='${m}';App.go('ventas')">${l}</button>`).join('')}</div>
+  ${VF.modo === 'rango' ? `<div class="row2" style="margin-top:12px"><div class="fld"><label>Desde</label><input class="in" type="date" value="${VF.d}" onchange="VF.d=this.value;App.go('ventas')"></div><div class="fld"><label>Hasta</label><input class="in" type="date" value="${VF.h}" onchange="VF.h=this.value;App.go('ventas')"></div></div>` : ''}
+  <div class="cxf" style="margin-top:12px"><div class="fld" style="grid-column:span 2"><label>Buscar</label><input class="in" id="vq" placeholder="🔎 Cliente, cédula, # nota o producto" value="${esc(VF.q)}" oninput="VF.q=this.value;App.go('ventas');setTimeout(()=>{const i=document.querySelector('#vq');i.focus();i.setSelectionRange(i.value.length,i.value.length)})"></div>
+   <div class="fld"><label>Tipo</label><select class="in" onchange="VF.tipo=this.value;App.go('ventas')">${[['', 'Todas'], ['contado', 'Contado'], ['cashea', 'Cashea'], ['credito', 'Crédito']].map(([k, l]) => `<option value="${k}" ${VF.tipo === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+   <div class="fld"><label>Vendedor</label><select class="in" onchange="VF.vend=this.value;App.go('ventas')"><option value="">Todos</option>${vends.map(n => `<option ${VF.vend === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div></div>
+  <div class="cxb" style="font-size:13px;margin-top:4px"><span>${vs.length} ventas</span><b style="color:var(--text)">Total ${fmt(tot)}</b><span>${fmt(tot, 'VES')}</span></div></div>
+  <div class="card c12">${vs.map(v => `<div class="vrow" onclick="App.verVenta('${v.id}')"><div class="vn">#${v.numero}</div><div style="flex:1;min-width:0"><b>${esc(cli(v.clienteId)?.nombre || 'Cliente de mostrador')}</b> ${tipoTag(v)}<br><small>${fdate(v.fecha)} · ${esc((v.items || []).map(i => (i.cant > 1 ? i.cant + '× ' : '') + i.nombre).join(', '))}</small></div><div style="text-align:right"><b>${fmt(v.total)}</b>${v.saldo > 0.009 ? `<br><small class="down">debe ${fmt(v.saldo)}</small>` : ''}</div></div>`).join('') || '<div class="empty">No hay ventas con ese filtro</div>'}</div></div>`;
+};
+
 // ---------- reportes ----------
 const RP = window.RP = { modo: 'hoy', tab: 'ventas', d: today(), h: today() };
-function rango() {
+function rango(RP = window.RP) {
   const t = new Date(today() + 'T12:00'), f = d => d.toLocaleDateString('en-CA');
   if (RP.modo === 'hoy') return [today(), today()];
   if (RP.modo === 'semana') { const d = new Date(t); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return [f(d), today()]; }
@@ -342,6 +362,29 @@ const App = window.App = {
     <button class="btn gh block" style="margin-top:12px" onclick="document.querySelector('.ov').remove()">Cerrar</button>`);
   },
   async delAbono(id) { if (!confirm('¿Borrar este abono? El saldo vuelve a subir.')) return; try { await store.delAbono(id); closeSheet(); render(); toast('Abono borrado'); } catch (e) { toast('Error: ' + e.message); } },
+  verVenta(id) {
+    const v = db().ventas.find(x => x.id === id), c = db().clientes.find(x => x.id === v.clienteId), T = db().tasa.valor, tk = TK();
+    const txtCli = `*${tk.nombre}*\nNota de venta #${v.numero} · ${fdate(v.fecha)}\n${(v.items || []).map(i => `${i.cant} x ${i.nombre}: $${(+i.precio).toFixed(2)}`).join('\n')}\nTotal: $${v.total.toFixed(2)} (Bs ${(v.total * T).toFixed(2)})${v.tipo === 'cashea' ? `\nInicial pagada: $${v.inicial.toFixed(2)}\nResto en cuotas con Cashea` : v.tipo === 'credito' ? `\nInicial: $${v.inicial.toFixed(2)}\nAbonado: $${(v.abonado || 0).toFixed(2)}\nSaldo: $${v.saldo.toFixed(2)}` : ''}\n${tk.pie || ''}`;
+    const txtAlm = `📦 *DESPACHO · Nota #${v.numero}*\nFecha: ${fdate(v.fecha)}\n\n${(v.items || []).map(i => `• ${i.cant} x ${i.nombre}`).join('\n')}\n\n*Cliente:* ${c?.nombre || 'Mostrador'}${c?.cedula ? '\nCédula: ' + c.cedula : ''}${c?.telefono ? '\nTeléfono: ' + c.telefono : ''}${c?.direccion ? '\nDirección: ' + c.direccion : ''}\n*Venta:* ${{ cashea: 'Cashea', credito: 'Crédito' }[v.tipo] || 'Contado'}${v.vendedor ? '\nVendedor: ' + v.vendedor : ''}`;
+    const o = sheet(`<h2>Venta #${v.numero} ${tipoTag(v)}</h2><div class="sub">${fdate(v.fecha)}${v.vendedor ? ' · ' + esc(v.vendedor) : ''}</div>
+    <div class="sum" style="margin-top:0"><div><span>Cliente</span><b>${esc(c?.nombre || 'Mostrador')}</b></div>${c?.telefono ? `<div><span>Teléfono</span><span>${esc(c.telefono)}</span></div>` : ''}${c?.direccion ? `<div><span>Dirección</span><span style="text-align:right">${esc(c.direccion)}</span></div>` : ''}</div>
+    <div class="sum">${(v.items || []).map(i => `<div><span>${i.cant} × ${esc(i.nombre)}</span><span>${fmt(i.precio * i.cant)}</span></div>`).join('')}
+     <div class="tot"><span>Total</span><span>${fmt(v.total, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares (tasa ${v.tasa || T})</span><span>Bs ${(v.total * (+v.tasa || T)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+     ${v.tipo !== 'contado' ? `<div><span>Inicial</span><span>${fmt(v.inicial)}</span></div>` : ''}${v.tipo === 'cashea' ? `<div><span>Financia Cashea</span><span>${fmt(v.financiado)}</span></div><div><span>Liquidación</span><span>${v.liquidado ? 'Recibida' : 'Pendiente'}</span></div>` : ''}${v.tipo === 'credito' ? `<div><span>Abonado</span><span class="up">${fmt(v.abonado)}</span></div><div><span>Saldo</span><b class="${v.saldo > 0.009 ? 'down' : 'up'}">${fmt(v.saldo)}</b></div>` : ''}
+     ${(v.pagos || []).map(p => `<div><span style="color:var(--mut)">${esc(p.metodo)}</span><span>${p.moneda === 'Bs' ? 'Bs ' + (+p.monto).toFixed(2) : '$' + (+p.monto).toFixed(2)}</span></div>`).join('')}</div>
+    <img id="tkImg" class="tkprev" alt="Ticket">
+    <button class="btn pri block" id="tkSh" disabled>Preparando ticket…</button>
+    <div class="row2" style="margin-top:10px"><a class="btn gh" target="_blank" href="https://wa.me/${waNum(c?.telefono)}?text=${encodeURIComponent(txtCli)}">💬 WhatsApp cliente</a><a class="btn gh" target="_blank" href="https://wa.me/${waNum(tk.almacen)}?text=${encodeURIComponent(txtAlm)}">📦 Enviar a almacén</a></div>
+    ${v.tipo === 'credito' && v.saldo > 0.009 ? `<div class="row2" style="margin-top:10px"><button class="btn gh" onclick="document.querySelector('.ov').remove();App.abonoForm('${v.id}')">Abonar</button><button class="btn gh" onclick="document.querySelector('.ov').remove();App.historial('${v.id}')">Historial de abonos</button></div>` : ''}
+    ${esJefe() ? `<button class="btn gh block del" style="margin-top:10px" onclick="App.anular('${v.id}')">Anular venta</button>` : ''}
+    <button class="btn gh block" style="margin-top:10px" onclick="document.querySelector('.ov').remove()">Cerrar</button>`);
+    ticketBlob(v).then(b => { const im = o.querySelector('#tkImg'), bt = o.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); bt.disabled = false; bt.textContent = '🧾 Enviar ticket (imagen)'; bt.onclick = () => shareTicket(b, v.numero); });
+  },
+  async anular(id) {
+    const v = db().ventas.find(x => x.id === id), m = prompt(`¿Anular la venta #${v.numero}? Los productos vuelven al inventario${v.tipo === 'credito' ? ' y se borran sus abonos' : ''}.\nEscribe el motivo:`);
+    if (m === null) return; if (!m.trim()) return toast('Escribe el motivo');
+    try { await store.anular(id, m.trim()); closeSheet(); render(); toast(`Venta #${v.numero} anulada`); } catch (e) { toast('Error: ' + e.message); }
+  },
   quitar(id) { cart = cart.filter(i => i.productoId !== id); render(); toast('Artículo quitado'); },
   vaciar() { if (!confirm('¿Vaciar toda la venta actual?')) return; cart = []; render(); },
   qty(id, d) { const it = cart.find(i => i.productoId === id); it.cant += d; if (it.cant <= 0) cart = cart.filter(i => i !== it); render(); },
@@ -428,7 +471,7 @@ const App = window.App = {
     <button class="btn gh block" style="margin-top:10px" onclick="document.querySelector('.ov').remove()">Listo</button>`);
     ticketBlob(v).then(b => { const im = document.querySelector('#tkImg'), bt = document.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); bt.disabled = false; bt.textContent = '🧾 Enviar ticket (imagen)'; bt.onclick = () => shareTicket(b, v.numero); });
   },
-  tkRead() { const g = k => $('#tk' + k).value.trim(), t = { nombre: g('N') || 'Muebles La Pascua', rif: g('R'), telefono: g('T'), direccion: g('D'), instagram: g('I'), pie: g('P') }; ['logo', 'bs', 'cliente', 'pagos', 'garantia', 'vendedor'].forEach(k => t[k] = $('#tk_' + k).checked); return t; },
+  tkRead() { const g = k => $('#tk' + k).value.trim(), t = { nombre: g('N') || 'Muebles La Pascua', rif: g('R'), telefono: g('T'), direccion: g('D'), instagram: g('I'), pie: g('P'), almacen: g('A') }; ['logo', 'bs', 'cliente', 'pagos', 'garantia', 'vendedor'].forEach(k => t[k] = $('#tk_' + k).checked); return t; },
   async tkSave() { try { await store.setTicket(this.tkRead()); toast('Ticket guardado'); } catch (e) { toast('Error: ' + e.message); } },
   async tkPrev() {
     const p = db().productos[0], v = { numero: 1001, fecha: today(), clienteId: db().clientes[0]?.id, vendedor: db().usuario?.nombre, tipo: 'contado', total: p ? +p.precio : 250, inicial: p ? +p.precio : 250, items: [{ productoId: p?.id, nombre: p?.nombre || 'Nevera 14 pies', cant: 1, precio: p ? +p.precio : 250 }], pagos: [{ metodo: 'Pago móvil', moneda: '$', monto: p ? +p.precio : 250 }] };
@@ -469,7 +512,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=17'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=18'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -591,7 +634,7 @@ function loginView(modo = 'entrar', msg = '') {
 }
 
 // ---------- render ----------
-const TITLES = { reportes: ['Reportes', 'Ventas y Cashea por período'], tablero: ['Tablero gerencial', 'Lo que pasa en tu negocio, en una mirada'], vender: ['Punto de venta', 'Contado o Cashea, en segundos'], inventario: ['Inventario', 'Existencias, costos y márgenes'], cashea: ['Cuentas por cobrar', 'Crédito propio y Cashea'], caja: ['Caja del día', 'Entradas, gastos y saldo'], clientes: ['Clientes', 'Tu cartera y su historial'], ajustes: ['Ajustes', 'Tasa, comisiones, usuarios y respaldo'] };
+const TITLES = { ventas: ['Ventas', 'Todas las ventas, con filtros y tickets'], reportes: ['Reportes', 'Ventas y Cashea por período'], tablero: ['Tablero gerencial', 'Lo que pasa en tu negocio, en una mirada'], vender: ['Punto de venta', 'Contado o Cashea, en segundos'], inventario: ['Inventario', 'Existencias, costos y márgenes'], cashea: ['Cuentas por cobrar', 'Crédito propio y Cashea'], caja: ['Caja del día', 'Entradas, gastos y saldo'], clientes: ['Clientes', 'Tu cartera y su historial'], ajustes: ['Ajustes', 'Tasa, comisiones, usuarios y respaldo'] };
 function render() {
   if (!db().usuario) return loginView();
   if (!db().usuario.activo) return loginView('entrar', `Hola ${esc(db().usuario.nombre)}, tu usuario está creado. El dueño debe activarlo en Ajustes → Usuarios. <br><br><a href="#" onclick="App.logout();return false" style="color:var(--amber2)">Cerrar sesión</a>`);

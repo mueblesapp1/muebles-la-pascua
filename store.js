@@ -45,6 +45,7 @@ export const store = {
     const r = ok(await sb.rpc('registrar_venta', { p: { cliente_id: v.clienteId, tipo: v.tipo, metodo: v.metodo, total: v.total, inicial_pct: v.inicialPct, inicial: v.inicial ?? null, pagos: v.pagos || null, items: v.items.map(i => ({ producto_id: i.productoId, nombre: i.nombre, cant: i.cant, precio: i.precio })) } }));
     await this.load(); return db.ventas.find(x => x.id === r.id) || r;
   },
+  async anular(id, motivo) { ok(await sb.rpc('anular_venta', { vid: id, motivo })); await this.load(); },
   async addAbono(a) { const r = ok(await sb.from('abonos').insert({ venta_id: a.ventaId, cliente_id: a.clienteId, monto: a.monto, metodo: a.metodo, pagos: a.pagos, nota: a.nota || null, usuario: db.usuario?.nombre }).select().single()); await this.load(); return r; },
   async delAbono(id) { ok(await sb.from('abonos').delete().eq('id', id)); await this.load(); },
   async addProducto(p) { ok(await sb.from('productos').insert({ nombre: p.nombre, categoria: p.categoria, icono: p.icono, costo: p.costo, precio: p.precio, precio2: p.precio2 || null, stock: p.stock, minimo: p.min, garantia_meses: p.garantiaMeses })); await this.load(); },
