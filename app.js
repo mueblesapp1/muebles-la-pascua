@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=7';
+import { store, today, daysAgo } from './store.js?v=8';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -314,11 +314,14 @@ const App = window.App = {
     const o = sheet(`<h2>${id ? 'Editar' : 'Nuevo'} producto</h2><div class="sub">Inventario por cantidad, sin seriales</div>
     <div class="row2"><div class="fld"><label>Ícono</label><input class="in" id="pI" value="${p.icono}"></div><div class="fld"><label>Categoría</label><select class="in" id="pC">${['Electrodomésticos', 'Muebles', 'Colchones', 'Tecnología', 'Otros'].map(c => `<option ${c === p.categoria ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div>
     <div class="fld"><label>Nombre</label><input class="in" id="pN" value="${esc(p.nombre)}"></div>
-    <div class="row2"><div class="fld"><label>Costo $</label><input class="in" id="pCo" type="number" step="0.01" value="${p.costo}"></div><div class="fld"><label>Precio de venta $</label><input class="in" id="pP" type="number" step="0.01" value="${p.precio}"></div></div>
+    <div class="row3"><div class="fld"><label>Costo $</label><input class="in" id="pCo" type="number" step="0.01" inputmode="decimal" value="${p.costo}"></div><div class="fld"><label>% utilidad</label><input class="in" id="pU" type="number" step="0.1" inputmode="decimal" placeholder="30" value="${+p.costo > 0 && +p.precio ? ((p.precio / p.costo - 1) * 100).toFixed(1) : ''}"></div><div class="fld"><label>Precio venta $</label><input class="in" id="pP" type="number" step="0.01" inputmode="decimal" value="${p.precio}"></div></div><div class="sub" id="pGan" style="margin:-4px 0 12px"></div>
     <div class="row2"><div class="fld"><label>Existencia</label><input class="in" id="pS" type="number" value="${p.stock}"></div><div class="fld"><label>Stock mínimo</label><input class="in" id="pM" type="number" value="${p.min}"></div></div>
     <div class="fld"><label>Garantía (meses)</label><input class="in" id="pG" type="number" value="${p.garantiaMeses}"></div>
     <button class="btn pri block" id="pOk">Guardar</button>${id ? `<button class="btn gh block" style="margin-top:10px" id="pDel">Retirar del catálogo</button>` : ''}`);
     const g = s => o.querySelector(s).value;
+    const co = o.querySelector('#pCo'), pu = o.querySelector('#pU'), pp = o.querySelector('#pP'), gan = () => { const c = +co.value, v = +pp.value; o.querySelector('#pGan').textContent = c > 0 && v > 0 ? `Ganancia por unidad: $${(v - c).toFixed(2)} · margen sobre venta ${((v - c) / v * 100).toFixed(1)}%` : ''; };
+    const calcP = () => { if (+co.value > 0 && pu.value !== '') pp.value = (+co.value * (1 + +pu.value / 100)).toFixed(2); gan(); };
+    co.oninput = calcP; pu.oninput = calcP; pp.oninput = () => { if (+co.value > 0 && pp.value !== '') pu.value = ((+pp.value / +co.value - 1) * 100).toFixed(1); gan(); }; gan();
     o.querySelector('#pOk').onclick = async () => { const d = { nombre: g('#pN'), categoria: g('#pC'), icono: g('#pI') || '📦', costo: +g('#pCo'), precio: +g('#pP'), stock: +g('#pS'), min: +g('#pM'), garantia_meses: +g('#pG') }; if (!d.nombre) return toast('Falta el nombre'); try { if (id) await store.updProducto(id, d); else await store.addProducto({ ...d, garantiaMeses: d.garantia_meses }); closeSheet(); toast('Guardado'); render(); } catch (e) { toast(e.message); } };
     if (id) o.querySelector('#pDel').onclick = async () => { await store.updProducto(id, { activo: false }); closeSheet(); render(); };
   },
@@ -333,7 +336,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=7'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=8'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
