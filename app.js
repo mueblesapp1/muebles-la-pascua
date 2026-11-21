@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=3';
+import { store, today, daysAgo } from './store.js?v=5';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -151,8 +151,11 @@ V.caja = () => {
 
 V.clientes = () => {
   const stats = id => { const vs = db().ventas.filter(v => v.clienteId === id); return { n: vs.length, t: vs.reduce((a, v) => a + v.total, 0), u: vs.at(-1)?.fecha }; };
-  return `<div style="margin-bottom:16px"><button class="btn pri" onclick="App.clienteForm()">+ Nuevo cliente</button></div><div class="card"><div style="overflow:auto"><table class="tbl"><thead><tr><th>Cliente</th><th>Cédula</th><th>Teléfono</th><th>Compras</th><th>Total</th><th>Última</th></tr></thead><tbody>
-  ${db().clientes.map(c => { const s = stats(c.id); return `<tr><td><b>${esc(c.nombre)}</b></td><td>${esc(c.cedula)}</td><td>${c.telefono ? `<a href="https://wa.me/58${c.telefono.replace(/\D/g, '').replace(/^0/, '')}" target="_blank" class="tag t-ok">WhatsApp</a> ${esc(c.telefono)}` : ''}</td><td>${s.n}</td><td>${fmt(s.t)}</td><td>${s.u ? fdate(s.u) : '—'}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+  const q = (window._qc || '').toLowerCase(), dig = q.replace(/\D/g, '');
+  const cs = db().clientes.filter(c => !q || c.nombre.toLowerCase().includes(q) || (c.direccion || '').toLowerCase().includes(q) || (dig && ((c.cedula || '').replace(/\D/g, '').includes(dig) || (c.telefono || '').replace(/\D/g, '').includes(dig))));
+  const wa = t => '58' + t.replace(/\D/g, '').replace(/^0/, '');
+  return `<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap"><input class="in" id="qc" placeholder="🔎 Buscar por nombre, cédula, teléfono o dirección…" value="${esc(window._qc || '')}" oninput="window._qc=this.value;App.go('clientes',true)" style="flex:1;min-width:220px"><button class="btn pri" onclick="App.clienteForm()">+ Nuevo cliente</button></div>
+  <div class="tiles">${cs.map((c, i) => { const s = stats(c.id); return `<div class="tile" style="animation-delay:${i * 20}ms" onclick="App.clienteForm('${c.id}')"><div style="display:flex;justify-content:space-between;align-items:center"><div class="ic" style="font-size:20px;font-weight:700">${esc(c.nombre.trim()[0] || '?').toUpperCase()}</div>${c.telefono ? `<a class="tag t-ok" target="_blank" href="https://wa.me/${wa(c.telefono)}" onclick="event.stopPropagation()">WhatsApp</a>` : ''}</div><b>${esc(c.nombre)}</b><small>${esc(c.cedula || 'Sin cédula')} · ${esc(c.telefono || 'sin teléfono')}</small><small>📍 ${esc(c.direccion || 'Sin dirección')}</small><div class="row"><span class="pr">${fmt(s.t)}</span><small>${s.n} compras${s.u ? ' · ' + fdate(s.u) : ''}</small></div></div>`; }).join('') || '<div class="empty">No hay clientes con ese filtro.</div>'}</div>`;
 };
 
 V.ajustes = () => `<div class="grid">
@@ -170,7 +173,7 @@ const closeSheet = () => document.querySelector('.ov')?.remove();
 
 const App = window.App = {
   page: 'tablero',
-  go(p, keep) { this.page = p; if (!keep) window._q = ''; location.hash = p; render(); },
+  go(p, keep) { this.page = p; if (!keep) { window._q = ''; window._qc = ''; } location.hash = p; render(); },
   setCur(c) { CUR = c; localStorage.setItem('mlp_cur', c); render(); },
   addCart(id) { const p = db().productos.find(p => p.id === id); if (!p || p.stock <= 0) return toast('Sin existencia'); const it = cart.find(i => i.productoId === id); if (it) { if (it.cant < p.stock) it.cant++; } else cart.push({ productoId: id, nombre: p.nombre, precio: +p.precio, cant: 1 }); render(); },
   qty(id, d) { const it = cart.find(i => i.productoId === id); it.cant += d; if (it.cant <= 0) cart = cart.filter(i => i !== it); render(); },
@@ -221,8 +224,8 @@ const App = window.App = {
       res.querySelectorAll('.it').forEach(d => d.onclick = () => { o.querySelector('#cCli').value = d.dataset.id; o.querySelector('#cBus').value = ''; cliUI(); });
       res.querySelector('#cNew').onclick = () => {
         const n = o.querySelector('#cBus').value.trim(), esNum = /^[\dVvEe-]+$/.test(n);
-        res.innerHTML = `<div class="sum" style="margin-top:0"><div class="fld"><label>Nombre</label><input class="in" id="nN" value="${esNum ? '' : esc(n)}"></div><div class="row2"><div class="fld"><label>Cédula</label><input class="in" id="nC" placeholder="V-" value="${esNum ? esc(n) : ''}"></div><div class="fld"><label>Teléfono</label><input class="in" id="nT" placeholder="0414-"></div></div><button class="btn pri block" id="nOk">Guardar y elegir</button></div>`;
-        res.querySelector('#nOk').onclick = async e => { const g = s => res.querySelector(s).value.trim(); if (!g('#nN')) return toast('Falta el nombre'); e.target.disabled = true; try { const c = await store.addCliente({ nombre: g('#nN'), cedula: g('#nC'), telefono: g('#nT') }); o.querySelector('#cCli').value = c.id; o.querySelector('#cBus').value = ''; toast('Cliente creado'); cliUI(); } catch (err) { toast(err.message); e.target.disabled = false; } };
+        res.innerHTML = `<div class="sum" style="margin-top:0"><div class="fld"><label>Nombre</label><input class="in" id="nN" value="${esNum ? '' : esc(n)}"></div><div class="row2"><div class="fld"><label>Cédula</label><input class="in" id="nC" placeholder="V-" value="${esNum ? esc(n) : ''}"></div><div class="fld"><label>Teléfono</label><input class="in" id="nT" placeholder="0414-"></div></div><div class="fld"><label>Dirección</label><input class="in" id="nD" placeholder="Sector, calle, referencia"></div><button class="btn pri block" id="nOk">Guardar y elegir</button></div>`;
+        res.querySelector('#nOk').onclick = async e => { const g = s => res.querySelector(s).value.trim(); if (!g('#nN')) return toast('Falta el nombre'); e.target.disabled = true; try { const c = await store.addCliente({ nombre: g('#nN'), cedula: g('#nC'), telefono: g('#nT'), direccion: g('#nD') }); o.querySelector('#cCli').value = c.id; o.querySelector('#cBus').value = ''; toast('Cliente creado'); cliUI(); } catch (err) { toast(err.message); e.target.disabled = false; } };
       };
     };
     o.querySelector('#cBus').oninput = cliUI; cliUI();
@@ -262,9 +265,10 @@ const App = window.App = {
     o.querySelector('#pOk').onclick = async () => { const d = { nombre: g('#pN'), categoria: g('#pC'), icono: g('#pI') || '📦', costo: +g('#pCo'), precio: +g('#pP'), stock: +g('#pS'), min: +g('#pM'), garantia_meses: +g('#pG') }; if (!d.nombre) return toast('Falta el nombre'); try { if (id) await store.updProducto(id, d); else await store.addProducto({ ...d, garantiaMeses: d.garantia_meses }); closeSheet(); toast('Guardado'); render(); } catch (e) { toast(e.message); } };
     if (id) o.querySelector('#pDel').onclick = async () => { await store.updProducto(id, { activo: false }); closeSheet(); render(); };
   },
-  clienteForm() {
-    const o = sheet(`<h2>Nuevo cliente</h2><div class="sub">Para facturas y seguimiento</div><div class="fld"><label>Nombre completo</label><input class="in" id="cN"></div><div class="row2"><div class="fld"><label>Cédula</label><input class="in" id="cC" placeholder="V-"></div><div class="fld"><label>Teléfono</label><input class="in" id="cT" placeholder="0414-"></div></div><div class="fld"><label>Dirección</label><input class="in" id="cD"></div><button class="btn pri block" id="cOk">Guardar</button>`);
-    o.querySelector('#cOk').onclick = async () => { const g = s => o.querySelector(s).value; if (!g('#cN')) return toast('Falta el nombre'); await store.addCliente({ nombre: g('#cN'), cedula: g('#cC'), telefono: g('#cT'), direccion: g('#cD') }); closeSheet(); render(); };
+  clienteForm(id) {
+    const c = db().clientes.find(c => c.id === id) || {};
+    const o = sheet(`<h2>${id ? 'Editar' : 'Nuevo'} cliente</h2><div class="sub">Para facturas, entregas y seguimiento</div><div class="fld"><label>Nombre completo</label><input class="in" id="cN" value="${esc(c.nombre || '')}"></div><div class="row2"><div class="fld"><label>Cédula / RIF</label><input class="in" id="cC" placeholder="V-" value="${esc(c.cedula || '')}"></div><div class="fld"><label>Teléfono</label><input class="in" id="cT" placeholder="0414-" inputmode="tel" value="${esc(c.telefono || '')}"></div></div><div class="fld"><label>Dirección</label><textarea class="in" id="cD" rows="3" placeholder="Sector, calle, casa, punto de referencia">${esc(c.direccion || '')}</textarea></div><button class="btn pri block" id="cOk">Guardar</button>`);
+    o.querySelector('#cOk').onclick = async e => { const g = s => o.querySelector(s).value.trim(); if (!g('#cN')) return toast('Falta el nombre'); e.target.disabled = true; const d = { nombre: g('#cN'), cedula: g('#cC'), telefono: g('#cT'), direccion: g('#cD') }; try { if (id) await store.updCliente(id, d); else await store.addCliente(d); closeSheet(); toast('Cliente guardado'); render(); } catch (err) { toast(err.message); e.target.disabled = false; } };
   },
   gastoForm() {
     const o = sheet(`<h2>Registrar gasto</h2><div class="sub">Sale de la caja de hoy</div><div class="fld"><label>Concepto</label><input class="in" id="gC"></div><div class="row2"><div class="fld"><label>Monto $</label><input class="in" id="gM" type="number" step="0.01"></div><div class="fld"><label>Categoría</label><select class="in" id="gK">${['Fijos', 'Nómina', 'Logística', 'Mercadeo', 'Servicios', 'Otros'].map(c => `<option>${c}</option>`).join('')}</select></div></div><button class="btn pri block" id="gOk">Guardar</button>`);
@@ -272,7 +276,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=3'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=5'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -332,8 +336,9 @@ function render() {
   <div class="foot">Tasa BCV <b style="color:var(--amber2)">${db().tasa.valor}</b> Bs/$<br><span class="kbd">Ctrl K</span> búsqueda rápida</div></aside>
   <main class="main"><div class="top"><h1>${t}<small>${s}</small></h1><span class="pill hide-m" onclick="App.palette()">🔎 Buscar <span class="kbd">Ctrl K</span></span><div class="cur"><button class="${CUR === 'USD' ? 'on' : ''}" onclick="App.setCur('USD')">$</button><button class="${CUR === 'VES' ? 'on' : ''}" onclick="App.setCur('VES')">Bs</button></div></div>
   <div id="view">${V[p]()}</div></main></div>
-  <nav class="dock">${NAV.filter(([k]) => k !== 'clientes').map(([k, l, i]) => `<a href="#${k}" class="${k === p ? 'on' : ''}" onclick="App.go('${k}');return false">${ico(i)}${l}</a>`).join('')}</nav>
+  <nav class="dock">${NAV.map(([k, l, i]) => `<a href="#${k}" class="${k === p ? 'on' : ''}" onclick="App.go('${k}');return false">${ico(i)}${l}</a>`).join('')}</nav>
   ${p !== 'vender' ? `<button class="fab" title="Nueva venta" onclick="App.go('vender')">+</button>` : ''}`;
+  if (p === 'clientes' && window._qc) { const i = document.querySelector('#qc'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
   if (p === 'vender' && window._q) { const i = document.querySelector('#view input'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
 }
 
