@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=11';
+import { store, today, daysAgo } from './store.js?v=12';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -18,6 +18,7 @@ const toast = m => { const t = document.createElement('div'); t.className = 'toa
 
 // ---------- iconos ----------
 const I = {
+  chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
   sell: '<path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M6 6L5 3H2"/>',
   box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
@@ -27,7 +28,7 @@ const I = {
   cog: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
 };
 const ico = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
-const NAV = [['tablero', 'Tablero', 'home'], ['vender', 'Vender', 'sell'], ['inventario', 'Inventario', 'box'], ['cashea', 'Cashea', 'cashea'], ['caja', 'Caja', 'cash'], ['clientes', 'Clientes', 'users'], ['ajustes', 'Ajustes', 'cog']];
+const NAV = [['tablero', 'Tablero', 'home'], ['vender', 'Vender', 'sell'], ['inventario', 'Inventario', 'box'], ['cashea', 'Cashea', 'cashea'], ['caja', 'Caja', 'cash'], ['clientes', 'Clientes', 'users'], ['reportes', 'Reportes', 'chart'], ['ajustes', 'Ajustes', 'cog']];
 
 // ---------- cálculos ----------
 const enRango = (v, n) => v.fecha >= daysAgo(n - 1);
@@ -174,6 +175,43 @@ V.ajustes = () => `<div class="grid">
   ${rol() === 'dueno' ? `<div class="card c6"><h3>Usuarios</h3>${db().perfiles.map(u => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);gap:8px"><span>${esc(u.nombre)} ${u.activo ? '' : '<span class="tag t-am">Pendiente</span>'}</span>${u.id === db().usuario.id ? '<span class="tag t-vi">Dueño (tú)</span>' : `<span style="display:flex;gap:6px"><select class="in" style="padding:6px 8px;width:auto" onchange="App.setRol('${u.id}',this.value)">${['vendedor', 'cajero', 'admin'].map(r => `<option ${u.rol === r ? 'selected' : ''}>${r}</option>`).join('')}</select><button class="pill" onclick="App.toggleUser('${u.id}',${!u.activo})">${u.activo ? 'Bloquear' : 'Activar'}</button></span>`}</div>`).join('')}<p style="color:var(--mut);font-size:12px;margin-top:10px">Tus empleados se registran en la app y aquí los activas.</p>
   <button class="btn gh block" style="margin-top:16px" onclick="App.borrarDemo()">🧹 Borrar datos de demostración</button></div>` : ''}
   <div class="card c6"><h3>Sesión</h3><p style="margin-bottom:12px">${esc(db().usuario.nombre)} · <span class="tag t-in">${rol()}</span></p><button class="btn gh" onclick="App.logout()">Cerrar sesión</button></div></div>`;
+
+// ---------- reportes ----------
+const RP = window.RP = { modo: 'hoy', tab: 'ventas', d: today(), h: today() };
+function rango() {
+  const t = new Date(today() + 'T12:00'), f = d => d.toLocaleDateString('en-CA');
+  if (RP.modo === 'hoy') return [today(), today()];
+  if (RP.modo === 'semana') { const d = new Date(t); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return [f(d), today()]; }
+  if (RP.modo === 'mes') return [today().slice(0, 8) + '01', today()];
+  return RP.d <= RP.h ? [RP.d, RP.h] : [RP.h, RP.d];
+}
+function repData() {
+  const [d, h] = rango(), vs = db().ventas.filter(v => v.fecha >= d && v.fecha <= h).sort((a, b) => a.fecha < b.fecha ? -1 : 1);
+  const S = (l, f) => l.reduce((a, x) => a + (+f(x) || 0), 0), cont = vs.filter(v => v.tipo !== 'cashea'), cas = vs.filter(v => v.tipo === 'cashea');
+  const dias = {}; vs.forEach(v => { const x = dias[v.fecha] ||= { n: 0, c: 0, k: 0, t: 0 }; x.n++; x.t += v.total; v.tipo === 'cashea' ? x.k += v.total : x.c += v.total; });
+  const met = {}; vs.forEach(v => (v.pagos?.length ? v.pagos : [{ metodo: v.metodo || '—', usd: v.inicial }]).forEach(p => met[p.metodo] = (met[p.metodo] || 0) + (+p.usd || 0)));
+  const prod = {}; vs.forEach(v => (v.items || []).forEach(i => { const x = prod[i.nombre] ||= { n: 0, t: 0, g: 0 }; x.n += i.cant; x.t += i.precio * i.cant; x.g += (i.precio - (i.costo || 0)) * i.cant; }));
+  const costo = S(vs, costoVenta), gas = S(db().gastos.filter(g => g.fecha >= d && g.fecha <= h), g => g.monto);
+  return { d, h, vs, cont, cas, dias, met, prod, total: S(vs, v => v.total), tc: S(cont, v => v.total), tk: S(cas, v => v.total), costo, gas, ini: S(cas, v => v.inicial), fin: S(cas, v => v.financiado), com: S(cas, v => v.comision), neto: S(cas, v => v.netoCashea), liq: S(cas.filter(v => v.liquidado), v => v.netoCashea), pend: S(cas.filter(v => !v.liquidado), v => v.netoCashea), venc: cas.filter(v => !v.liquidado && v.liquidaEstimada < today()) };
+}
+V.reportes = () => {
+  if (!esJefe()) return '<div class="empty">Solo el dueño o un admin ven los reportes.</div>';
+  const r = repData(), cli = id => db().clientes.find(c => c.id === id)?.nombre || 'Sin cliente', k = (t, v, s = '') => `<div class="card kpi c3"><h3>${t}</h3><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  const per = `<div class="card c12"><div class="chips">${[['hoy', 'Hoy'], ['semana', 'Esta semana'], ['mes', 'Este mes'], ['rango', 'Rango']].map(([m, l]) => `<button class="pill ${RP.modo === m ? 'on' : ''}" onclick="RP.modo='${m}';App.go('reportes')">${l}</button>`).join('')}</div>
+  ${RP.modo === 'rango' ? `<div class="row2" style="margin-top:12px"><div class="fld"><label>Desde</label><input class="in" type="date" value="${RP.d}" onchange="RP.d=this.value;App.go('reportes')"></div><div class="fld"><label>Hasta</label><input class="in" type="date" value="${RP.h}" onchange="RP.h=this.value;App.go('reportes')"></div></div>` : ''}
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap"><div class="cur"><button class="${RP.tab === 'ventas' ? 'on' : ''}" onclick="RP.tab='ventas';App.go('reportes')">Ventas</button><button class="${RP.tab === 'cashea' ? 'on' : ''}" onclick="RP.tab='cashea';App.go('reportes')">Cashea</button></div><span class="sub" style="margin:0">${fdate(r.d)}${r.d !== r.h ? ' al ' + fdate(r.h) : ''} · ${r.vs.length} ventas</span><button class="btn gh" onclick="App.repExcel()">⬇ Excel</button></div></div>`;
+  if (RP.tab === 'cashea') return `<div class="grid">${per}
+  ${k('Vendido con Cashea', fmt(r.tk), `${r.cas.length} ventas · ${fmt(r.tk, 'VES')}`)}${k('Inicial cobrada', fmt(r.ini), 'Entró a tu caja')}${k('Financiado', fmt(r.fin), `Comisión ${fmt(r.com)}`)}${k('Neto a recibir', fmt(r.neto), `Recibido ${fmt(r.liq)} · pendiente ${fmt(r.pend)}`)}
+  ${r.venc.length ? `<div class="card c12" style="border-color:rgba(255,107,107,.5)"><h3>⚠️ ${r.venc.length} liquidaciones atrasadas</h3><p>${fmt(r.venc.reduce((a, v) => a + v.netoCashea, 0))} que Cashea ya debió pagarte.</p></div>` : ''}
+  <div class="card c12"><h3>Detalle Cashea</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Inicial</th><th>Financiado</th><th>Comisión</th><th>Neto</th><th>Estado</th></tr></thead><tbody>${r.cas.map(v => `<tr><td>${v.numero}</td><td>${fdate(v.fecha)}</td><td>${esc(cli(v.clienteId))}</td><td>${fmt(v.total)}</td><td>${fmt(v.inicial)}</td><td>${fmt(v.financiado)}</td><td>${fmt(v.comision)}</td><td><b>${fmt(v.netoCashea)}</b></td><td>${v.liquidado ? '<span class="tag t-ok">Recibido</span>' : `<span class="tag ${v.liquidaEstimada < today() ? 't-bad' : 't-in'}">${v.liquidaEstimada ? fdate(v.liquidaEstimada) : 'Pendiente'}</span>`}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">Sin ventas Cashea en este período</td></tr>'}</tbody></table></div></div></div>`;
+  const tp = Object.entries(r.prod).sort((a, b) => b[1].t - a[1].t).slice(0, 10);
+  return `<div class="grid">${per}
+  ${k('Total vendido', fmt(r.total), `${r.vs.length} ventas · ${fmt(r.total, 'VES')}`)}${k('Contado', fmt(r.tc), `${r.cont.length} ventas`)}${k('Crédito Cashea', fmt(r.tk), `${r.cas.length} ventas · inicial ${fmt(r.ini)}`)}${k('Utilidad bruta', fmt(r.total - r.costo - r.com), `Gastos ${fmt(r.gas)} · neta ${fmt(r.total - r.costo - r.com - r.gas)}`)}
+  ${RP.modo !== 'hoy' ? `<div class="card c6"><h3>Por día</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Día</th><th>Ventas</th><th>Contado</th><th>Cashea</th><th>Total</th></tr></thead><tbody>${Object.entries(r.dias).map(([f, x]) => `<tr><td>${fdate(f)}</td><td>${x.n}</td><td>${fmt(x.c)}</td><td>${fmt(x.k)}</td><td><b>${fmt(x.t)}</b></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin ventas</td></tr>'}</tbody></table></div></div>` : ''}
+  <div class="card c6"><h3>Cobrado por forma de pago</h3><table class="tbl"><tbody>${Object.entries(r.met).sort((a, b) => b[1] - a[1]).map(([m, t]) => `<tr><td>${esc(m)}</td><td style="text-align:right"><b>${fmt(t)}</b></td></tr>`).join('') || '<tr><td class="empty">Sin cobros</td></tr>'}</tbody></table></div>
+  <div class="card c6"><h3>Productos más vendidos</h3><table class="tbl"><thead><tr><th>Producto</th><th>Unid.</th><th>Vendido</th><th>Ganancia</th></tr></thead><tbody>${tp.map(([n, x]) => `<tr><td>${esc(n)}</td><td>${x.n}</td><td>${fmt(x.t)}</td><td>${fmt(x.g)}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">Sin ventas</td></tr>'}</tbody></table></div>
+  <div class="card c12"><h3>Ventas del período</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Pago</th><th>Total</th></tr></thead><tbody>${r.vs.slice().reverse().map(v => `<tr><td>${v.numero}</td><td>${fdate(v.fecha)}</td><td>${esc(cli(v.clienteId))}</td><td><span class="tag ${v.tipo === 'cashea' ? 't-vi' : 't-ok'}">${v.tipo === 'cashea' ? 'Cashea' : 'Contado'}</span></td><td>${esc(v.metodo || '')}</td><td><b>${fmt(v.total)}</b></td></tr>`).join('') || '<tr><td colspan="6" class="empty">Sin ventas en este período</td></tr>'}</tbody></table></div></div></div>`;
+};
 
 // ---------- hojas (formularios) ----------
 function sheet(html) { const o = document.createElement('div'); o.className = 'ov'; o.innerHTML = `<div class="sheet">${html}</div>`; o.onclick = e => { if (e.target === o) o.remove(); }; document.body.appendChild(o); return o; }
@@ -350,7 +388,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=11'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=12'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -358,6 +396,16 @@ const App = window.App = {
   async setRol(id, r) { await store.setPerfil(id, { rol: r }); toast('Rol actualizado'); },
   async toggleUser(id, a) { await store.setPerfil(id, { activo: a }); render(); },
   async borrarDemo() { if (!confirm('¿Borrar todos los datos de demostración? Tus datos reales se quedan.')) return; await store.borrarDemo(); render(); toast('Demo borrada'); },
+  async repExcel() {
+    const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs'), r = repData(), wb = XLSX.utils.book_new(), tasa = db().tasa.valor, cli = id => db().clientes.find(c => c.id === id)?.nombre || '';
+    const add = (n, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ Nota: 'Sin datos' }]), n);
+    add('Resumen', [{ Desde: r.d, Hasta: r.h, Ventas: r.vs.length, 'Total $': r.total, 'Contado $': r.tc, 'Cashea $': r.tk, 'Inicial Cashea $': r.ini, 'Costo $': r.costo, 'Comisión Cashea $': r.com, 'Gastos $': r.gas, 'Utilidad neta $': r.total - r.costo - r.com - r.gas, 'Tasa BCV': tasa, 'Total Bs': +(r.total * tasa).toFixed(2) }]);
+    add('Ventas', r.vs.map(v => ({ Numero: v.numero, Fecha: v.fecha, Cliente: cli(v.clienteId), Tipo: v.tipo, Pago: v.metodo, 'Total $': v.total, 'Cobrado $': v.inicial, Vendedor: v.vendedor || '' })));
+    add('Por día', Object.entries(r.dias).map(([f, x]) => ({ Fecha: f, Ventas: x.n, 'Contado $': x.c, 'Cashea $': x.k, 'Total $': x.t })));
+    add('Productos', Object.entries(r.prod).map(([n, x]) => ({ Producto: n, Unidades: x.n, 'Vendido $': x.t, 'Ganancia $': x.g })));
+    add('Cashea', r.cas.map(v => ({ Numero: v.numero, Fecha: v.fecha, Cliente: cli(v.clienteId), 'Total $': v.total, 'Inicial $': v.inicial, 'Financiado $': v.financiado, 'Comisión $': v.comision, 'Neto $': v.netoCashea, Estado: v.liquidado ? 'Recibido' : 'Pendiente', 'Liquida': v.liquidaEstimada })));
+    XLSX.writeFile(wb, `Reporte ${r.d}${r.d !== r.h ? ' a ' + r.h : ''}.xlsx`);
+  },
   async respaldar() {
     const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs');
     const wb = XLSX.utils.book_new(), d = db();
@@ -399,18 +447,18 @@ function loginView(modo = 'entrar', msg = '') {
 }
 
 // ---------- render ----------
-const TITLES = { tablero: ['Tablero gerencial', 'Lo que pasa en tu negocio, en una mirada'], vender: ['Punto de venta', 'Contado o Cashea, en segundos'], inventario: ['Inventario', 'Existencias, costos y márgenes'], cashea: ['Cashea', 'Lo que Cashea te debe liquidar'], caja: ['Caja del día', 'Entradas, gastos y saldo'], clientes: ['Clientes', 'Tu cartera y su historial'], ajustes: ['Ajustes', 'Tasa, comisiones, usuarios y respaldo'] };
+const TITLES = { reportes: ['Reportes', 'Ventas y Cashea por período'], tablero: ['Tablero gerencial', 'Lo que pasa en tu negocio, en una mirada'], vender: ['Punto de venta', 'Contado o Cashea, en segundos'], inventario: ['Inventario', 'Existencias, costos y márgenes'], cashea: ['Cashea', 'Lo que Cashea te debe liquidar'], caja: ['Caja del día', 'Entradas, gastos y saldo'], clientes: ['Clientes', 'Tu cartera y su historial'], ajustes: ['Ajustes', 'Tasa, comisiones, usuarios y respaldo'] };
 function render() {
   if (!db().usuario) return loginView();
   if (!db().usuario.activo) return loginView('entrar', `Hola ${esc(db().usuario.nombre)}, tu usuario está creado. El dueño debe activarlo en Ajustes → Usuarios. <br><br><a href="#" onclick="App.logout();return false" style="color:var(--amber2)">Cerrar sesión</a>`);
   const p = App.page, [t, s] = TITLES[p];
-  const nav = NAV.filter(([k]) => k !== 'ajustes' || true);
+  const nav = NAV.filter(([k]) => k !== 'reportes' || esJefe());
   $('#app').innerHTML = `<div class="shell"><aside class="side"><div class="brand"><img src="mark.png"><div><b>Muebles La Pascua</b><small>Gerencia</small></div></div>
   <nav class="nav">${nav.map(([k, l, i]) => `<a href="#${k}" class="${k === p ? 'on' : ''}" onclick="App.go('${k}');return false">${ico(i)}${l}</a>`).join('')}</nav>
   <div class="foot">Tasa BCV <b style="color:var(--amber2)">${db().tasa.valor}</b> Bs/$<br><span class="kbd">Ctrl K</span> búsqueda rápida</div></aside>
   <main class="main"><div class="top"><h1>${t}<small>${s}</small></h1><span class="pill hide-m" onclick="App.palette()">🔎 Buscar <span class="kbd">Ctrl K</span></span><div class="cur"><button class="${CUR === 'USD' ? 'on' : ''}" onclick="App.setCur('USD')">$</button><button class="${CUR === 'VES' ? 'on' : ''}" onclick="App.setCur('VES')">Bs</button></div></div>
   <div id="view">${V[p]()}</div></main></div>
-  <nav class="dock">${NAV.map(([k, l, i]) => `<a href="#${k}" class="${k === p ? 'on' : ''}" onclick="App.go('${k}');return false">${ico(i)}${l}</a>`).join('')}</nav>
+  <nav class="dock">${nav.map(([k, l, i]) => `<a href="#${k}" class="${k === p ? 'on' : ''}" onclick="App.go('${k}');return false">${ico(i)}${l}</a>`).join('')}</nav>
   ${p !== 'vender' ? `<button class="fab" title="Nueva venta" onclick="App.go('vender')">+</button>` : ''}`;
   if (p === 'clientes' && window._qc) { const i = document.querySelector('#qc'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
   if (p === 'vender' && window._q) { const i = document.querySelector('#view input'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
