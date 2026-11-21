@@ -42,7 +42,7 @@ export const store = {
     const r = ok(await sb.rpc('registrar_venta', { p: { cliente_id: v.clienteId, tipo: v.tipo, metodo: v.metodo, total: v.total, inicial_pct: v.inicialPct, pagos: v.pagos || null, items: v.items.map(i => ({ producto_id: i.productoId, nombre: i.nombre, cant: i.cant, precio: i.precio })) } }));
     await this.load(); return db.ventas.find(x => x.id === r.id) || r;
   },
-  async addProducto(p) { ok(await sb.from('productos').insert({ nombre: p.nombre, categoria: p.categoria, icono: p.icono, costo: p.costo, precio: p.precio, stock: p.stock, minimo: p.min, garantia_meses: p.garantiaMeses })); await this.load(); },
+  async addProducto(p) { ok(await sb.from('productos').insert({ nombre: p.nombre, categoria: p.categoria, icono: p.icono, costo: p.costo, precio: p.precio, precio2: p.precio2 || null, stock: p.stock, minimo: p.min, garantia_meses: p.garantiaMeses })); await this.load(); },
   async updProducto(id, ch) { const m = { ...ch }; if ('min' in m) { m.minimo = m.min; delete m.min; } ok(await sb.from('productos').update(m).eq('id', id)); await this.load(); },
   async addCliente(c) { const r = ok(await sb.from('clientes').insert(c).select().single()); await this.load(); return r; },
   async updCliente(id, c) { ok(await sb.from('clientes').update(c).eq('id', id)); await this.load(); },
