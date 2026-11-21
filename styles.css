@@ -161,3 +161,4 @@ select.in option{background:#0C1322}
 
 .pill.del{color:#ff6b6b;border-color:rgba(255,107,107,.4)}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}@media (max-width:520px){.row3{gap:6px}.row3 .in{padding-left:10px;padding-right:6px}}
+.pp{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;vertical-align:middle;margin-left:4px}.pp button{background:none;border:0;color:var(--mut);font-size:11px;padding:3px 8px;cursor:pointer}.pp button.on{background:var(--amber,#F5A524);color:#111;font-weight:700}
