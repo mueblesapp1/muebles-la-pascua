@@ -178,7 +178,7 @@ const App = window.App = {
     const tot = cart.reduce((a, i) => a + i.precio * i.cant, 0);
     const st = { tipo: 'contado', pct: 60, metodo: 'Pago móvil' };
     const o = sheet(`<h2>Cobrar</h2><div class="sub">${cart.length} productos · ${fmt(tot, 'USD')}</div>
-    <div class="fld"><label>Cliente</label><select class="in" id="cCli"><option value="">Cliente de mostrador</option>${db().clientes.map(c => `<option value="${c.id}">${esc(c.nombre)} · ${esc(c.cedula || '')}</option>`).join('')}</select></div>
+    <div class="fld"><label>Cliente</label><input class="in" id="cBus" placeholder="🔎 Buscar por nombre, cédula o teléfono…" autocomplete="off"><input type="hidden" id="cCli"><div id="cRes" style="margin-top:8px"></div></div>
     <div class="fld"><label>Forma de venta</label><div class="seg" id="sTipo"><button data-v="contado" class="on">💵 Contado</button><button data-v="cashea">💳 Cashea</button></div></div>
     <div class="fld" id="fPct" style="display:none"><label>Inicial según el nivel del cliente en Cashea</label><div class="seg" id="sPct">${[60, 50, 40].map(p => `<button data-v="${p}" class="${p === 60 ? 'on' : ''}">${p}%</button>`).join('')}<input class="in" id="pctOtro" type="number" placeholder="Otro %" style="flex:1;min-width:90px"></div></div>
     <div class="fld"><label id="lMet">Método de pago</label><div class="seg" id="sMet">${['Pago móvil', 'Efectivo $', 'Efectivo Bs', 'Punto de venta', 'Zelle', 'Binance'].map(m => `<button data-v="${m}" class="${m === 'Pago móvil' ? 'on' : ''}">${m}</button>`).join('')}</div></div>
@@ -192,6 +192,21 @@ const App = window.App = {
     const seg = (id, key, num) => o.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => { o.querySelectorAll(`#${id} button`).forEach(x => x.classList.remove('on')); b.classList.add('on'); st[key] = num ? +b.dataset.v : b.dataset.v; calc(); });
     seg('sTipo', 'tipo'); seg('sPct', 'pct', true); seg('sMet', 'metodo');
     o.querySelector('#pctOtro').oninput = e => { const v = +e.target.value; if (v > 0 && v < 100) { st.pct = v; o.querySelectorAll('#sPct button').forEach(x => x.classList.remove('on')); calc(); } };
+    const cliUI = () => {
+      const q = o.querySelector('#cBus').value.trim().toLowerCase(), sel = o.querySelector('#cCli').value, res = o.querySelector('#cRes');
+      if (sel) { const c = db().clientes.find(c => c.id === sel); res.innerHTML = `<div class="tag t-ok" style="display:inline-flex;gap:8px;padding:8px 12px">✓ ${esc(c.nombre)} ${c.cedula ? '· ' + esc(c.cedula) : ''} <a href="#" id="cQuit" style="color:inherit">✕</a></div>`; res.querySelector('#cQuit').onclick = e => { e.preventDefault(); o.querySelector('#cCli').value = ''; cliUI(); }; return; }
+      if (!q) { res.innerHTML = '<small style="color:var(--mut)">Sin cliente = cliente de mostrador</small>'; return; }
+      const dig = q.replace(/\D/g, '');
+      const m = db().clientes.filter(c => c.nombre.toLowerCase().includes(q) || (dig && ((c.cedula || '').replace(/\D/g, '').includes(dig) || (c.telefono || '').replace(/\D/g, '').includes(dig)))).slice(0, 6);
+      res.innerHTML = m.map(c => `<div class="it" data-id="${c.id}" style="padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:6px;cursor:pointer"><b>${esc(c.nombre)}</b> <small style="color:var(--mut)">${esc(c.cedula || '')} ${esc(c.telefono || '')}</small></div>`).join('') + `<button class="pill" id="cNew" style="margin-top:4px">+ Crear cliente "${esc(o.querySelector('#cBus').value.trim())}"</button>`;
+      res.querySelectorAll('.it').forEach(d => d.onclick = () => { o.querySelector('#cCli').value = d.dataset.id; o.querySelector('#cBus').value = ''; cliUI(); });
+      res.querySelector('#cNew').onclick = () => {
+        const n = o.querySelector('#cBus').value.trim(), esNum = /^[\dVvEe-]+$/.test(n);
+        res.innerHTML = `<div class="sum" style="margin-top:0"><div class="fld"><label>Nombre</label><input class="in" id="nN" value="${esNum ? '' : esc(n)}"></div><div class="row2"><div class="fld"><label>Cédula</label><input class="in" id="nC" placeholder="V-" value="${esNum ? esc(n) : ''}"></div><div class="fld"><label>Teléfono</label><input class="in" id="nT" placeholder="0414-"></div></div><button class="btn pri block" id="nOk">Guardar y elegir</button></div>`;
+        res.querySelector('#nOk').onclick = async e => { const g = s => res.querySelector(s).value.trim(); if (!g('#nN')) return toast('Falta el nombre'); e.target.disabled = true; try { const c = await store.addCliente({ nombre: g('#nN'), cedula: g('#nC'), telefono: g('#nT') }); o.querySelector('#cCli').value = c.id; o.querySelector('#cBus').value = ''; toast('Cliente creado'); cliUI(); } catch (err) { toast(err.message); e.target.disabled = false; } };
+      };
+    };
+    o.querySelector('#cBus').oninput = cliUI; cliUI();
     calc();
     o.querySelector('#bOk').onclick = async e => {
       e.target.disabled = true; e.target.textContent = 'Guardando…';
