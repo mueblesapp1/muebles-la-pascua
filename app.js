@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=26';
+import { store, today, daysAgo } from './store.js?v=27';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -466,14 +466,14 @@ const App = window.App = {
     try { await Promise.all(pend.map(i => store.despachar(i.id, true))); } catch (e) { toast('Error: ' + e.message); await store.load(); render(); }
   },
   variosForm(p) {
-    const T = db().tasa.valor, o = sheet(`<h2>${p.icono} Productos Varios</h2><div class="sub">Precio libre, no maneja existencia</div>
-    <div class="fld"><label>Descripción</label><input class="in" id="xD" value="Productos Varios"></div>
+    const T = db().tasa.valor, o = sheet(`<h2>${p.icono} Producto Varios</h2><div class="sub">Precio libre, no maneja existencia</div>
+    <div class="fld"><label>Descripción</label><input class="in" id="xD" value="Producto Varios"></div>
     <div class="row3"><div class="fld"><label>Precio</label><input class="in" id="xP" type="number" step="0.01" inputmode="decimal" placeholder="0.00"></div><div class="fld"><label>Moneda</label><select class="in" id="xM"><option>$</option><option>Bs</option></select></div><div class="fld"><label>Cantidad</label><input class="in" id="xC" type="number" inputmode="numeric" value="1"></div></div>
     <div id="xMsg" style="margin:-4px 0 12px;font-size:13px;color:var(--mut)"></div><button class="btn pri block" id="xOk">Agregar a la venta</button>`);
     const usd = () => { const m = +o.querySelector('#xP').value || 0; return o.querySelector('#xM').value === 'Bs' ? m / T : m; };
     const msg = () => { const u = usd(); o.querySelector('#xMsg').textContent = u ? `${fmt(u, 'USD')} · ${fmt(u, 'VES')} c/u` : ''; };
     o.querySelector('#xP').oninput = msg; o.querySelector('#xM').onchange = msg; setTimeout(() => o.querySelector('#xP').focus(), 50);
-    o.querySelector('#xOk').onclick = () => { const u = +usd().toFixed(2), c = Math.max(1, +o.querySelector('#xC').value || 1), d = o.querySelector('#xD').value.trim() || 'Productos Varios'; if (!(u > 0)) return toast('Escribe el precio'); cart.push({ k: 'v' + Date.now(), productoId: p.id, nombre: d, precio: u, p1: u, p2: 0, nivel: 1, cant: c, varios: true }); closeSheet(); render(); };
+    o.querySelector('#xOk').onclick = () => { const u = +usd().toFixed(2), c = Math.max(1, +o.querySelector('#xC').value || 1), d = o.querySelector('#xD').value.trim() || 'Producto Varios'; if (!(u > 0)) return toast('Escribe el precio'); cart.push({ k: 'v' + Date.now(), productoId: p.id, nombre: d, precio: u, p1: u, p2: 0, nivel: 1, cant: c, varios: true }); closeSheet(); render(); };
   },
   quitar(id) { cart = cart.filter(i => i.k !== id); render(); toast('Artículo quitado'); },
   vaciar() { if (!confirm('¿Vaciar toda la venta actual?')) return; cart = []; render(); },
@@ -702,7 +702,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=26'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=27'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
