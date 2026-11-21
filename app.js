@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=19';
+import { store, today, daysAgo } from './store.js?v=20';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -7,8 +7,8 @@ let cart = [];
 const db = () => store.db;
 const rol = () => db().usuario?.rol;
 const esJefe = () => ['dueno', 'admin'].includes(rol());
-const MODS = [['tablero', 'Tablero'], ['vender', 'Vender'], ['ventas', 'Ventas'], ['inventario', 'Inventario'], ['cashea', 'Por cobrar'], ['caja', 'Caja'], ['clientes', 'Clientes'], ['reportes', 'Reportes']];
-const modsDef = r => r === 'admin' ? MODS.map(m => m[0]) : r === 'cajero' ? ['vender', 'ventas', 'cashea', 'caja', 'clientes'] : ['vender', 'ventas', 'clientes'];
+const MODS = [['tablero', 'Tablero'], ['vender', 'Vender'], ['ventas', 'Ventas'], ['despacho', 'Por despachar'], ['inventario', 'Inventario'], ['cashea', 'Por cobrar'], ['caja', 'Caja'], ['clientes', 'Clientes'], ['reportes', 'Reportes']];
+const modsDef = r => r === 'admin' ? MODS.map(m => m[0]) : r === 'cajero' ? ['vender', 'ventas', 'despacho', 'cashea', 'caja', 'clientes'] : ['vender', 'ventas', 'despacho', 'clientes'];
 const puede = k => k === 'ajustes' || rol() === 'dueno' || (db().usuario?.modulos || modsDef(rol())).includes(k);
 
 // ---------- formato ----------
@@ -28,11 +28,12 @@ const I = {
   cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
   cashea: '<path d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.8 7 7s2 3 5 3.6 5 1.6 5 3.9-2.2 3.9-5 3.9-5-1.2-5-3.2"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.8.8 3 2.6 3.5 5.2"/>',
+  truck: '<path d="M1 6h13v10H1zM14 10h4l3 3v3h-7"/><circle cx="5.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>',
   cog: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
 };
 const ico = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
-const NAV = [['tablero', 'Tablero', 'home'], ['vender', 'Vender', 'sell'], ['ventas', 'Ventas', 'list'], ['inventario', 'Inventario', 'box'], ['cashea', 'Por cobrar', 'cashea'], ['caja', 'Caja', 'cash'], ['clientes', 'Clientes', 'users'], ['reportes', 'Reportes', 'chart'], ['ajustes', 'Ajustes', 'cog']];
+const NAV = [['tablero', 'Tablero', 'home'], ['vender', 'Vender', 'sell'], ['ventas', 'Ventas', 'list'], ['despacho', 'Despacho', 'truck'], ['inventario', 'Inventario', 'box'], ['cashea', 'Por cobrar', 'cashea'], ['caja', 'Caja', 'cash'], ['clientes', 'Clientes', 'users'], ['reportes', 'Reportes', 'chart'], ['ajustes', 'Ajustes', 'cog']];
 
 // ---------- cálculos ----------
 const enRango = (v, n) => v.fecha >= daysAgo(n - 1);
@@ -233,6 +234,25 @@ V.ventas = () => {
   <div class="card c12">${vs.map(v => `<div class="vrow" onclick="App.verVenta('${v.id}')"><div class="vn">#${v.numero}</div><div style="flex:1;min-width:0"><b>${esc(cli(v.clienteId)?.nombre || 'Cliente de mostrador')}</b> ${tipoTag(v)}<br><small>${fdate(v.fecha)} · ${esc((v.items || []).map(i => (i.cant > 1 ? i.cant + '× ' : '') + i.nombre).join(', '))}</small></div><div style="text-align:right"><b>${fmt(v.total)}</b>${v.saldo > 0.009 ? `<br><small class="down">debe ${fmt(v.saldo)}</small>` : ''}</div></div>`).join('') || '<div class="empty">No hay ventas con ese filtro</div>'}</div></div>`;
 };
 
+// ---------- despacho ----------
+const DS = window.DS = { tab: 'pend', q: '' };
+V.despacho = () => {
+  const cli = id => db().clientes.find(c => c.id === id), q = DS.q.trim().toLowerCase();
+  const all = db().ventas.filter(v => (v.items || []).length), pend = all.filter(v => v.items.some(i => !i.despachado)), done = all.filter(v => v.items.every(i => i.despachado));
+  const base = DS.tab === 'pend' ? pend.slice().sort((x, y) => x.numero - y.numero) : done.slice().reverse().slice(0, 60);
+  const lst = base.filter(v => !q || String(v.numero) === q.replace('#', '') || (c => c && (c.nombre.toLowerCase().includes(q) || (c.cedula || '').toLowerCase().includes(q) || (c.telefono || '').includes(q)))(cli(v.clienteId)) || v.items.some(i => i.nombre.toLowerCase().includes(q)));
+  const uds = pend.reduce((s, v) => s + v.items.filter(i => !i.despachado).reduce((t, i) => t + i.cant, 0), 0);
+  return `<div class="grid">
+  <div class="card kpi hero c4"><h3>Ventas por despachar</h3><div class="v">${pend.length}</div><div class="s">${uds} unidades pendientes</div></div>
+  <div class="card kpi c4"><h3>Despachadas hoy</h3><div class="v up">${all.filter(v => v.items.some(i => i.despachado && (i.despachado_en || '').slice(0, 10) === today())).length}</div><div class="s">Ventas con algo despachado hoy</div></div>
+  <div class="card kpi c4"><h3>La más antigua</h3><div class="v">${pend.length ? '#' + Math.min(...pend.map(v => v.numero)) : '—'}</div><div class="s">${pend.length ? fdate(pend.reduce((m, v) => v.fecha < m ? v.fecha : m, pend[0].fecha)) : 'Todo despachado 🎉'}</div></div>
+  <div class="card c12" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="cur"><button class="${DS.tab === 'pend' ? 'on' : ''}" onclick="DS.tab='pend';App.go('despacho')">⏳ Pendientes (${pend.length})</button><button class="${DS.tab === 'done' ? 'on' : ''}" onclick="DS.tab='done';App.go('despacho')">✅ Despachadas</button></div><input class="in" id="dq" placeholder="🔎 Cliente, # nota o producto" value="${esc(DS.q)}" oninput="DS.q=this.value;App.go('despacho');setTimeout(()=>{const i=document.querySelector('#dq');i.focus();i.setSelectionRange(i.value.length,i.value.length)})" style="flex:1;min-width:180px;max-width:340px"></div>
+  ${lst.map(v => { const c = cli(v.clienteId), n = v.items.filter(i => i.despachado).length; return `<div class="card c6"><h3><span>#${v.numero} · ${esc(c?.nombre || 'Mostrador')}</span><span class="tag ${n === v.items.length ? 't-ok' : n ? 't-am' : 't-bad'}">${n}/${v.items.length}</span></h3>
+   <small style="color:var(--mut)">${fdate(v.fecha)}${c?.telefono ? ' · ' + esc(c.telefono) : ''}${c?.direccion ? '<br>📍 ' + esc(c.direccion) : ''}</small>
+   <div style="margin-top:8px">${v.items.map(i => `<label class="dsp ${i.despachado ? 'ok' : ''}"><input type="checkbox" ${i.despachado ? 'checked' : ''} onchange="App.despachar('${v.id}','${i.id}',this.checked)"><span><b>${i.cant} × ${esc(i.nombre)}</b>${i.despachado ? `<small>Despachado ${i.despachado_en ? new Date(i.despachado_en).toLocaleString('es-VE', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''}${i.despachado_por ? ' · ' + esc(i.despachado_por) : ''}</small>` : ''}</span></label>`).join('')}</div>
+   <div class="row2" style="margin-top:10px">${n < v.items.length ? `<button class="btn pri" onclick="App.despacharTodo('${v.id}')">✓ Despachar todo</button>` : '<span></span>'}<button class="btn gh" onclick="App.verVenta('${v.id}')">Ver venta</button></div></div>`; }).join('') || `<div class="card c12"><div class="empty">${DS.tab === 'pend' ? (q ? 'Nada coincide' : 'No hay nada por despachar 🎉') : 'Aún no hay ventas despachadas'}</div></div>`}</div>`;
+};
+
 // ---------- reportes ----------
 const RP = window.RP = { modo: 'hoy', tab: 'ventas', d: today(), h: today() };
 function rango(RP = window.RP) {
@@ -371,7 +391,7 @@ const App = window.App = {
     const txtAlm = `📦 *DESPACHO · Nota #${v.numero}*\nFecha: ${fdate(v.fecha)}\n\n${(v.items || []).map(i => `• ${i.cant} x ${i.nombre}`).join('\n')}\n\n*Cliente:* ${c?.nombre || 'Mostrador'}${c?.cedula ? '\nCédula: ' + c.cedula : ''}${c?.telefono ? '\nTeléfono: ' + c.telefono : ''}${c?.direccion ? '\nDirección: ' + c.direccion : ''}\n*Venta:* ${{ cashea: 'Cashea', credito: 'Crédito' }[v.tipo] || 'Contado'}${v.vendedor ? '\nVendedor: ' + v.vendedor : ''}`;
     const o = sheet(`<h2>Venta #${v.numero} ${tipoTag(v)}</h2><div class="sub">${fdate(v.fecha)}${v.vendedor ? ' · ' + esc(v.vendedor) : ''}</div>
     <div class="sum" style="margin-top:0"><div><span>Cliente</span><b>${esc(c?.nombre || 'Mostrador')}</b></div>${c?.telefono ? `<div><span>Teléfono</span><span>${esc(c.telefono)}</span></div>` : ''}${c?.direccion ? `<div><span>Dirección</span><span style="text-align:right">${esc(c.direccion)}</span></div>` : ''}</div>
-    <div class="sum">${(v.items || []).map(i => `<div><span>${i.cant} × ${esc(i.nombre)}</span><span>${fmt(i.precio * i.cant)}</span></div>`).join('')}
+    <div class="sum">${(v.items || []).map(i => `<div><span>${i.despachado ? '✅' : '⏳'} ${i.cant} × ${esc(i.nombre)}</span><span>${fmt(i.precio * i.cant)}</span></div>`).join('')}
      <div class="tot"><span>Total</span><span>${fmt(v.total, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares (tasa ${v.tasa || T})</span><span>Bs ${(v.total * (+v.tasa || T)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
      ${v.tipo !== 'contado' ? `<div><span>Inicial</span><span>${fmt(v.inicial)}</span></div>` : ''}${v.tipo === 'cashea' ? `<div><span>Financia Cashea</span><span>${fmt(v.financiado)}</span></div><div><span>Liquidación</span><span>${v.liquidado ? 'Recibida' : 'Pendiente'}</span></div>` : ''}${v.tipo === 'credito' ? `<div><span>Abonado</span><span class="up">${fmt(v.abonado)}</span></div><div><span>Saldo</span><b class="${v.saldo > 0.009 ? 'down' : 'up'}">${fmt(v.saldo)}</b></div>` : ''}
      ${(v.pagos || []).map(p => `<div><span style="color:var(--mut)">${esc(p.metodo)}</span><span>${p.moneda === 'Bs' ? 'Bs ' + (+p.monto).toFixed(2) : '$' + (+p.monto).toFixed(2)}</span></div>`).join('')}</div>
@@ -387,6 +407,17 @@ const App = window.App = {
     const v = db().ventas.find(x => x.id === id), m = prompt(`¿Anular la venta #${v.numero}? Los productos vuelven al inventario${v.tipo === 'credito' ? ' y se borran sus abonos' : ''}.\nEscribe el motivo:`);
     if (m === null) return; if (!m.trim()) return toast('Escribe el motivo');
     try { await store.anular(id, m.trim()); closeSheet(); render(); toast(`Venta #${v.numero} anulada`); } catch (e) { toast('Error: ' + e.message); }
+  },
+  async despachar(vid, iid, okk) {
+    const v = db().ventas.find(x => x.id === vid), it = v.items.find(i => i.id === iid);
+    Object.assign(it, { despachado: okk, despachado_en: okk ? new Date().toISOString() : null, despachado_por: okk ? db().usuario.nombre : null });
+    render(); if (okk && v.items.every(i => i.despachado)) toast(`Venta #${v.numero} despachada completa ✅`);
+    try { await store.despachar(iid, okk); } catch (e) { toast('Error: ' + e.message); await store.load(); render(); }
+  },
+  async despacharTodo(vid) {
+    const v = db().ventas.find(x => x.id === vid), pend = v.items.filter(i => !i.despachado);
+    pend.forEach(it => Object.assign(it, { despachado: true, despachado_en: new Date().toISOString(), despachado_por: db().usuario.nombre })); render(); toast(`Venta #${v.numero} despachada ✅`);
+    try { await Promise.all(pend.map(i => store.despachar(i.id, true))); } catch (e) { toast('Error: ' + e.message); await store.load(); render(); }
   },
   quitar(id) { cart = cart.filter(i => i.productoId !== id); render(); toast('Artículo quitado'); },
   vaciar() { if (!confirm('¿Vaciar toda la venta actual?')) return; cart = []; render(); },
@@ -515,7 +546,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=19'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=20'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -659,7 +690,7 @@ function loginView(modo = 'entrar', msg = '') {
 }
 
 // ---------- render ----------
-const TITLES = { ventas: ['Ventas', 'Todas las ventas, con filtros y tickets'], reportes: ['Reportes', 'Ventas y Cashea por período'], tablero: ['Tablero gerencial', 'Lo que pasa en tu negocio, en una mirada'], vender: ['Punto de venta', 'Contado o Cashea, en segundos'], inventario: ['Inventario', 'Existencias, costos y márgenes'], cashea: ['Cuentas por cobrar', 'Crédito propio y Cashea'], caja: ['Caja del día', 'Entradas, gastos y saldo'], clientes: ['Clientes', 'Tu cartera y su historial'], ajustes: ['Ajustes', 'Tasa, comisiones, usuarios y respaldo'] };
+const TITLES = { despacho: ['Por despachar', 'Marca cada producto cuando sale del almacén'], ventas: ['Ventas', 'Todas las ventas, con filtros y tickets'], reportes: ['Reportes', 'Ventas y Cashea por período'], tablero: ['Tablero gerencial', 'Lo que pasa en tu negocio, en una mirada'], vender: ['Punto de venta', 'Contado o Cashea, en segundos'], inventario: ['Inventario', 'Existencias, costos y márgenes'], cashea: ['Cuentas por cobrar', 'Crédito propio y Cashea'], caja: ['Caja del día', 'Entradas, gastos y saldo'], clientes: ['Clientes', 'Tu cartera y su historial'], ajustes: ['Ajustes', 'Tasa, comisiones, usuarios y respaldo'] };
 function render() {
   if (!db().usuario) return loginView();
   if (!db().usuario.activo) return loginView('entrar', `Hola ${esc(db().usuario.nombre)}, tu usuario está creado. El dueño debe activarlo en Ajustes → Usuarios. <br><br><a href="#" onclick="App.logout();return false" style="color:var(--amber2)">Cerrar sesión</a>`);

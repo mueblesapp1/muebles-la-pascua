@@ -46,6 +46,7 @@ export const store = {
     await this.load(); return db.ventas.find(x => x.id === r.id) || r;
   },
   async anular(id, motivo) { ok(await sb.rpc('anular_venta', { vid: id, motivo })); await this.load(); },
+  async despachar(itemId, okk) { ok(await sb.rpc('marcar_despacho', { p_item: itemId, p_ok: okk })); },
   async addAbono(a) { const r = ok(await sb.from('abonos').insert({ venta_id: a.ventaId, cliente_id: a.clienteId, monto: a.monto, metodo: a.metodo, pagos: a.pagos, nota: a.nota || null, usuario: db.usuario?.nombre }).select().single()); await this.load(); return r; },
   async delAbono(id) { ok(await sb.from('abonos').delete().eq('id', id)); await this.load(); },
   async addProducto(p) { ok(await sb.from('productos').insert({ nombre: p.nombre, categoria: p.categoria, icono: p.icono, costo: p.costo, precio: p.precio, precio2: p.precio2 || null, stock: p.stock, minimo: p.min, garantia_meses: p.garantiaMeses })); await this.load(); },
@@ -61,5 +62,5 @@ export const store = {
   async cambiarClave(id, pass) { ok(await sb.rpc('cambiar_clave', { p_uid: id, p_pass: pass })); },
   async setPerfil(id, ch) { ok(await sb.from('perfiles').update(ch).eq('id', id)); await this.load(); },
   async borrarDemo() { ok(await sb.from('ventas').delete().eq('demo', true)); ok(await sb.from('gastos').delete().eq('demo', true)); ok(await sb.from('productos').delete().eq('demo', true)); ok(await sb.from('clientes').delete().eq('demo', true)); await this.load(); },
-  live(cb) { sb.channel('cambios').on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'abonos' }, cb).subscribe(); },
+  live(cb) { sb.channel('cambios').on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'abonos' }, cb).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'venta_items' }, cb).subscribe(); },
 };
