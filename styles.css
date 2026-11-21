@@ -170,3 +170,4 @@ select.in option{background:#0C1322}
 .pill.on{background:var(--amber,#F5A524);color:#111;border-color:transparent;font-weight:700}
 .hoy3.h4{grid-template-columns:repeat(4,1fr)}.hoy3.h4 .tt{grid-column:auto}@media (max-width:520px){.hoy3.h4{grid-template-columns:1fr 1fr}.hoy3.h4 .tt{grid-column:auto}}
 .cx{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}.cx:last-child{border-bottom:0}.cxb{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--mut);margin-top:4px}.cxs{font-size:20px;font-weight:700;color:var(--amber2,#F5A524)}
+.hoy3.h5{grid-template-columns:repeat(5,1fr)}@media (max-width:520px){.hoy3.h5{grid-template-columns:1fr 1fr}.hoy3.h5 .tt{grid-column:span 2}}
