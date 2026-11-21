@@ -6,7 +6,7 @@ export const sb = createClient(SB_URL, SB_KEY);
 export const today = () => new Date().toLocaleDateString('en-CA');
 export const daysAgo = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toLocaleDateString('en-CA'); };
 
-const db = { abonos: [], productos: [], clientes: [], ventas: [], gastos: [], perfiles: [], tasa: { valor: 0, fecha: '', fuente: 'BCV' }, config: { comisionCashea: 4 }, usuario: null };
+const db = { proveedores: [], compras: [], pagosProv: [], abonos: [], productos: [], clientes: [], ventas: [], gastos: [], perfiles: [], tasa: { valor: 0, fecha: '', fuente: 'BCV' }, config: { comisionCashea: 4 }, usuario: null };
 const ok = ({ data, error }) => { if (error) throw new Error(error.message); return data; };
 
 export const store = {
@@ -22,7 +22,7 @@ export const store = {
   async registro(nombre, email, password) { ok(await sb.auth.signUp({ email, password, options: { data: { nombre } } })); return this.session(); },
   async logout() { await sb.auth.signOut(); db.usuario = null; },
   async load() {
-    const [pr, cl, ve, ga, cf, pe, ab] = await Promise.all([
+    const [pr, cl, ve, ga, cf, pe, ab, pv, co, pp] = await Promise.all([
       sb.from('productos').select('*').eq('activo', true).order('nombre'),
       sb.from('clientes').select('*').order('nombre'),
       sb.from('ventas').select('*, venta_items(*)').eq('anulada', false).order('numero'),
@@ -30,12 +30,18 @@ export const store = {
       sb.from('config').select('*').eq('id', 1).single(),
       sb.from('perfiles').select('*').order('creado'),
       sb.from('abonos').select('*').order('creado'),
+      sb.from('proveedores').select('*').order('nombre'),
+      sb.from('compras').select('*, compra_items(*)').eq('anulada', false).order('numero'),
+      sb.from('pagos_proveedor').select('*').order('creado'),
     ]);
     db.productos = ok(pr).map(p => ({ ...p, min: p.minimo, garantiaMeses: p.garantia_meses }));
     db.clientes = ok(cl);
     db.ventas = ok(ve).map(v => ({ ...v, clienteId: v.cliente_id, items: v.venta_items, netoCashea: +v.neto_cashea, liquidaEstimada: v.liquida_estimada, total: +v.total, inicial: +v.inicial, financiado: +v.financiado, comision: +v.comision }));
     db.abonos = ok(ab).map(a => ({ ...a, monto: +a.monto, ventaId: a.venta_id, clienteId: a.cliente_id }));
     db.ventas.forEach(v => { if (v.tipo === 'credito') { v.abonado = db.abonos.filter(a => a.ventaId === v.id).reduce((x, a) => x + a.monto, 0); v.saldo = Math.max(0, +(v.financiado - v.abonado).toFixed(2)); } else v.saldo = 0; });
+    db.proveedores = pv.error ? [] : pv.data;
+    db.pagosProv = pp.error ? [] : pp.data.map(x => ({ ...x, monto: +x.monto, compraId: x.compra_id, proveedorId: x.proveedor_id }));
+    db.compras = (co.error ? [] : co.data).map(c => { const pag = db.pagosProv.filter(x => x.compraId === c.id).reduce((s, x) => s + x.monto, 0); return { ...c, total: +c.total, items: c.compra_items, proveedorId: c.proveedor_id, pagado: pag, saldo: Math.max(0, +(+c.total - pag).toFixed(2)) }; });
     db.gastos = ok(ga).map(g => ({ ...g, monto: +g.monto }));
     const c = ok(cf); db.config = { comisionCashea: +c.comision_cashea, negocio: c.negocio, ticket: c.ticket || {}, categorias: c.categorias || ['Electrodomésticos', 'Muebles', 'Colchones', 'Tecnología', 'Otros'] }; db.tasa = { valor: +c.tasa, fecha: c.tasa_fecha, fuente: c.tasa_fuente };
     db.perfiles = ok(pe);
@@ -47,6 +53,12 @@ export const store = {
   },
   async anular(id, motivo) { ok(await sb.rpc('anular_venta', { vid: id, motivo })); await this.load(); },
   async despachar(itemId, okk) { ok(await sb.rpc('marcar_despacho', { p_item: itemId, p_ok: okk })); },
+  async addCompra(c) { const r = ok(await sb.rpc('registrar_compra', { p: c })); await this.load(); return r; },
+  async anularCompra(id, motivo) { ok(await sb.rpc('anular_compra', { cid: id, motivo })); await this.load(); },
+  async addPagoProv(x) { ok(await sb.from('pagos_proveedor').insert({ compra_id: x.compraId, proveedor_id: x.proveedorId, monto: x.monto, metodo: x.metodo, pagos: x.pagos, nota: x.nota || null, usuario: db.usuario?.nombre })); await this.load(); },
+  async delPagoProv(id) { ok(await sb.from('pagos_proveedor').delete().eq('id', id)); await this.load(); },
+  async addProveedor(p) { const r = ok(await sb.from('proveedores').insert(p).select().single()); await this.load(); return r; },
+  async updProveedor(id, p) { ok(await sb.from('proveedores').update(p).eq('id', id)); await this.load(); },
   async addAbono(a) { const r = ok(await sb.from('abonos').insert({ venta_id: a.ventaId, cliente_id: a.clienteId, monto: a.monto, metodo: a.metodo, pagos: a.pagos, nota: a.nota || null, usuario: db.usuario?.nombre }).select().single()); await this.load(); return r; },
   async delAbono(id) { ok(await sb.from('abonos').delete().eq('id', id)); await this.load(); },
   async addProducto(p) { ok(await sb.from('productos').insert({ nombre: p.nombre, categoria: p.categoria, icono: p.icono, costo: p.costo, precio: p.precio, precio2: p.precio2 || null, stock: p.stock, minimo: p.min, garantia_meses: p.garantiaMeses })); await this.load(); },
@@ -62,5 +74,5 @@ export const store = {
   async cambiarClave(id, pass) { ok(await sb.rpc('cambiar_clave', { p_uid: id, p_pass: pass })); },
   async setPerfil(id, ch) { ok(await sb.from('perfiles').update(ch).eq('id', id)); await this.load(); },
   async borrarDemo() { ok(await sb.from('ventas').delete().eq('demo', true)); ok(await sb.from('gastos').delete().eq('demo', true)); ok(await sb.from('productos').delete().eq('demo', true)); ok(await sb.from('clientes').delete().eq('demo', true)); await this.load(); },
-  live(cb) { sb.channel('cambios').on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'abonos' }, cb).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'venta_items' }, cb).subscribe(); },
+  live(cb) { sb.channel('cambios').on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'abonos' }, cb).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'venta_items' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'compras' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'pagos_proveedor' }, cb).subscribe(); },
 };

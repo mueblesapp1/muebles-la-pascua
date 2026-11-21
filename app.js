@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=22';
+import { store, today, daysAgo } from './store.js?v=23';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -7,8 +7,8 @@ let cart = [];
 const db = () => store.db;
 const rol = () => db().usuario?.rol;
 const esJefe = () => ['dueno', 'admin'].includes(rol());
-const MODS = [['tablero', 'Tablero'], ['vender', 'Vender'], ['ventas', 'Ventas'], ['despacho', 'Por despachar'], ['inventario', 'Inventario'], ['cashea', 'Por cobrar'], ['caja', 'Caja'], ['clientes', 'Clientes'], ['reportes', 'Reportes']];
-const modsDef = r => r === 'almacen' ? ['despacho', 'inventario'] : r === 'admin' ? MODS.map(m => m[0]) : r === 'cajero' ? ['vender', 'ventas', 'despacho', 'cashea', 'caja', 'clientes'] : ['vender', 'ventas', 'despacho', 'clientes'];
+const MODS = [['tablero', 'Tablero'], ['vender', 'Vender'], ['ventas', 'Ventas'], ['despacho', 'Por despachar'], ['inventario', 'Inventario'], ['cashea', 'Por cobrar'], ['compras', 'Compras'], ['porpagar', 'Por pagar'], ['caja', 'Caja'], ['clientes', 'Clientes'], ['reportes', 'Reportes']];
+const modsDef = r => r === 'almacen' ? ['despacho', 'inventario', 'compras'] : r === 'admin' ? MODS.map(m => m[0]) : r === 'cajero' ? ['vender', 'ventas', 'despacho', 'cashea', 'caja', 'clientes'] : ['vender', 'ventas', 'despacho', 'clientes'];
 const puede = k => k === 'ajustes' || rol() === 'dueno' || (db().usuario?.modulos || modsDef(rol())).includes(k);
 
 // ---------- formato ----------
@@ -29,11 +29,13 @@ const I = {
   cashea: '<path d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.8 7 7s2 3 5 3.6 5 1.6 5 3.9-2.2 3.9-5 3.9-5-1.2-5-3.2"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.8.8 3 2.6 3.5 5.2"/>',
   truck: '<path d="M1 6h13v10H1zM14 10h4l3 3v3h-7"/><circle cx="5.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/>',
+  inbox: '<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5 5h14l2 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/>',
+  wallet: '<rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20M16 15h2M6 6V4h12v2"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>',
   cog: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
 };
 const ico = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
-const NAV = [['tablero', 'Tablero', 'home'], ['vender', 'Vender', 'sell'], ['ventas', 'Ventas', 'list'], ['despacho', 'Despacho', 'truck'], ['inventario', 'Inventario', 'box'], ['cashea', 'Por cobrar', 'cashea'], ['caja', 'Caja', 'cash'], ['clientes', 'Clientes', 'users'], ['reportes', 'Reportes', 'chart'], ['ajustes', 'Ajustes', 'cog']];
+const NAV = [['tablero', 'Tablero', 'home'], ['vender', 'Vender', 'sell'], ['ventas', 'Ventas', 'list'], ['despacho', 'Despacho', 'truck'], ['inventario', 'Inventario', 'box'], ['cashea', 'Por cobrar', 'cashea'], ['compras', 'Compras', 'inbox'], ['porpagar', 'Por pagar', 'wallet'], ['caja', 'Caja', 'cash'], ['clientes', 'Clientes', 'users'], ['reportes', 'Reportes', 'chart'], ['ajustes', 'Ajustes', 'cog']];
 
 // ---------- cálculos ----------
 const enRango = (v, n) => v.fecha >= daysAgo(n - 1);
@@ -154,14 +156,14 @@ V.caja = () => {
   const met = {}; hoy.forEach(v => (v.pagos?.length ? v.pagos.map(x => [x.metodo, x.usd]) : [[v.metodo || '—', v.inicial]]).forEach(([k, u]) => met[k] = (met[k] || 0) + +u));
   const abH = db().abonos.filter(x => x.fecha === today()); abH.forEach(x => (x.pagos?.length ? x.pagos.map(p => [p.metodo, p.usd]) : [[x.metodo || '—', x.monto]]).forEach(([k, u]) => met[k] = (met[k] || 0) + +u));
   const ing = hoy.reduce((a, v) => a + v.inicial, 0) + abH.reduce((a, x) => a + x.monto, 0);
-  const gh = db().gastos.filter(g => g.fecha === today()), eg = gh.reduce((a, g) => a + g.monto, 0);
+  const gh = db().gastos.filter(g => g.fecha === today()), pph = db().pagosProv.filter(x => x.fecha === today()), eg = gh.reduce((a, g) => a + g.monto, 0) + pph.reduce((a, x) => a + x.monto, 0);
   const gm = db().gastos.slice().reverse().slice(0, 12);
   return `<div class="grid">
   <div class="card kpi hero c4"><h3>Entró hoy a caja</h3><div class="v">${fmt(ing)}</div><div class="s">${hoy.length} ventas + ${abH.length} abonos</div></div>
-  <div class="card kpi c4"><h3>Gastos de hoy</h3><div class="v down">${fmt(eg)}</div><div class="s">${gh.length} movimientos</div></div>
+  <div class="card kpi c4"><h3>Salió hoy</h3><div class="v down">${fmt(eg)}</div><div class="s">${gh.length} gastos + ${pph.length} pagos a proveedores</div></div>
   <div class="card kpi c4"><h3>Saldo del día</h3><div class="v ${ing - eg >= 0 ? 'up' : 'down'}">${fmt(ing - eg)}</div><div class="s">Tasa ${db().tasa.valor} Bs/$</div></div>
   <div class="card c5"><h3>Por método de pago</h3>${Object.entries(met).map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><span>${esc(k)}</span><b>${both(v)}</b></div>`).join('') || '<div class="empty">Sin ventas hoy todavía</div>'}</div>
-  <div class="card c7"><h3>Gastos ${esJefe() ? `<button class="pill" onclick="App.gastoForm()">+ Gasto</button>` : ''}</h3><table class="tbl"><tbody>${gm.map(g => `<tr><td>${fdate(g.fecha)}</td><td>${esc(g.concepto)}<br><small style="color:var(--mut)">${esc(g.categoria)}</small></td><td style="text-align:right" class="down">−${fmt(g.monto)}</td></tr>`).join('')}</tbody></table></div></div>`;
+  <div class="card c7"><h3>Gastos ${esJefe() ? `<button class="pill" onclick="App.gastoForm()">+ Gasto</button>` : ''}</h3><table class="tbl"><tbody>${pph.map(x => `<tr><td>${fdate(x.fecha)}</td><td>Pago a ${esc(provN(x.proveedorId))}<br><small style="color:var(--mut)">Proveedor · ${esc(x.metodo || '')}</small></td><td style="text-align:right" class="down">−${fmt(x.monto)}</td></tr>`).join('')}${gm.map(g => `<tr><td>${fdate(g.fecha)}</td><td>${esc(g.concepto)}<br><small style="color:var(--mut)">${esc(g.categoria)}</small></td><td style="text-align:right" class="down">−${fmt(g.monto)}</td></tr>`).join('')}</tbody></table></div></div>`;
 };
 
 V.clientes = () => {
@@ -236,6 +238,43 @@ V.ventas = () => {
 
 // ---------- despacho ----------
 const DS = window.DS = { tab: 'pend', q: '', sel: {} };
+const CP = window.CP = { tab: 'compras', q: '' };
+const provN = id => db().proveedores.find(p => p.id === id)?.nombre || '—';
+const docL = c => (c.doc_tipo === 'nota' ? 'Nota de entrega' : 'Factura') + (c.doc_numero ? ' ' + c.doc_numero : '');
+const puedeComprar = () => ['dueno', 'admin', 'almacen'].includes(rol());
+V.compras = () => {
+  const q = CP.q.trim().toLowerCase();
+  const segm = `<div class="card c12" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="cur"><button class="${CP.tab === 'compras' ? 'on' : ''}" onclick="CP.tab='compras';App.go('compras')">🧾 Compras</button><button class="${CP.tab === 'prov' ? 'on' : ''}" onclick="CP.tab='prov';App.go('compras')">🏭 Proveedores</button></div><input class="in" id="cpq" placeholder="🔎 Buscar…" value="${esc(CP.q)}" oninput="CP.q=this.value;App.go('compras');setTimeout(()=>{const i=document.querySelector('#cpq');i.focus();i.setSelectionRange(i.value.length,i.value.length)})" style="flex:1;min-width:180px;max-width:340px"></div>`;
+  const btns = puedeComprar() ? `<div class="card c12" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn pri" onclick="App.compraForm()">+ Nueva compra</button><button class="btn gh" onclick="App.provForm()">+ Proveedor</button></div>` : '';
+  if (CP.tab === 'prov') {
+    const ps = db().proveedores.filter(p => !q || [p.nombre, p.rif, p.telefono, p.contacto].join(' ').toLowerCase().includes(q));
+    return `<div class="grid">${btns}${segm}${ps.map(p => { const cs = db().compras.filter(c => c.proveedorId === p.id), deb = cs.reduce((a, c) => a + c.saldo, 0); return `<div class="card c6"><div style="display:flex;justify-content:space-between;gap:10px"><div><b>${esc(p.nombre)}</b><br><small style="color:var(--mut)">${esc([p.rif, p.telefono, p.contacto].filter(Boolean).join(' · '))}</small></div><div style="text-align:right"><small style="color:var(--mut)">Le debes</small><div class="${deb > 0.009 ? 'down' : ''}"><b>${fmt(deb)}</b></div></div></div><div style="margin-top:8px;color:var(--mut);font-size:13px">${cs.length} compras · ${fmt(cs.reduce((a, c) => a + c.total, 0))} en total</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${puedeComprar() ? `<button class="pill" onclick="App.provForm('${p.id}')">Editar</button>` : ''}${p.telefono ? `<a class="pill" target="_blank" href="https://wa.me/${waNum(p.telefono)}">💬 WhatsApp</a>` : ''}</div></div>`; }).join('') || '<div class="card c12"><div class="empty">Aún no hay proveedores.</div></div>'}</div>`;
+  }
+  const mes = today().slice(0, 8) + '01', cm = db().compras.filter(c => c.fecha >= mes);
+  const cs = db().compras.filter(c => !q || [provN(c.proveedorId), c.doc_numero, c.numero, ...(c.items || []).map(i => i.nombre)].join(' ').toLowerCase().includes(q)).slice().reverse().slice(0, 80);
+  return `<div class="grid">
+  <div class="card kpi hero c4"><h3>Compras del mes</h3><div class="v">${fmt(cm.reduce((a, c) => a + c.total, 0))}</div><div class="s">${cm.length} documentos</div></div>
+  <div class="card kpi c4"><h3>Unidades cargadas</h3><div class="v">${cm.reduce((a, c) => a + (c.items || []).reduce((s, i) => s + i.cant, 0), 0)}</div><div class="s">este mes</div></div>
+  <div class="card kpi c4"><h3>Por pagar</h3><div class="v down">${fmt(db().compras.reduce((a, c) => a + c.saldo, 0))}</div><div class="s">a proveedores</div></div>
+  ${btns}${segm}
+  <div class="card c12"><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>Fecha</th><th>Proveedor</th><th>Documento</th><th>Condición</th><th>Total</th><th>Saldo</th></tr></thead><tbody>
+  ${cs.map(c => `<tr onclick="App.verCompra('${c.id}')" style="cursor:pointer"><td>${c.numero}</td><td>${fdate(c.fecha)}</td><td>${esc(provN(c.proveedorId))}</td><td>${esc(docL(c))}</td><td>${c.condicion === 'credito' ? '<span class="tag t-in">Crédito</span>' : '<span class="tag t-ok">Contado</span>'}</td><td><b>${fmt(c.total)}</b></td><td>${c.saldo > 0.009 ? `<span class="down">${fmt(c.saldo)}</span>` : '—'}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">Aún no hay compras registradas.</td></tr>'}
+  </tbody></table></div></div></div>`;
+};
+const PP = window.PP = { q: '' };
+V.porpagar = () => {
+  const q = PP.q.trim().toLowerCase(), ab = db().compras.filter(c => c.saldo > 0.009 && (!q || [provN(c.proveedorId), c.doc_numero].join(' ').toLowerCase().includes(q)));
+  const tot = ab.reduce((a, c) => a + c.saldo, 0), venc = ab.filter(c => c.vence && c.vence < today()), mes = today().slice(0, 8) + '01';
+  const pm = db().pagosProv.filter(x => x.fecha >= mes);
+  const grupos = {}; ab.forEach(c => (grupos[c.proveedorId] ||= []).push(c));
+  return `<div class="grid">
+  <div class="card kpi hero c4"><h3>Total por pagar</h3><div class="v">${fmt(tot)}</div><div class="s">${ab.length} documentos · ${Object.keys(grupos).length} proveedores</div></div>
+  <div class="card kpi c4"><h3>Vencido</h3><div class="v ${venc.length ? 'down' : ''}">${fmt(venc.reduce((a, c) => a + c.saldo, 0))}</div><div class="s">${venc.length} documentos vencidos</div></div>
+  <div class="card kpi c4"><h3>Pagado este mes</h3><div class="v up">${fmt(pm.reduce((a, x) => a + x.monto, 0))}</div><div class="s">${pm.length} pagos</div></div>
+  <div class="card c12"><input class="in" id="ppq" placeholder="🔎 Buscar proveedor o documento…" value="${esc(PP.q)}" oninput="PP.q=this.value;App.go('porpagar');setTimeout(()=>{const i=document.querySelector('#ppq');i.focus();i.setSelectionRange(i.value.length,i.value.length)})"></div>
+  ${Object.entries(grupos).sort((a, b) => b[1].reduce((s, c) => s + c.saldo, 0) - a[1].reduce((s, c) => s + c.saldo, 0)).map(([pid, cs]) => `<div class="card c12"><h3 style="display:flex;justify-content:space-between"><span>🏭 ${esc(provN(pid))}</span><span class="down">${fmt(cs.reduce((s, c) => s + c.saldo, 0))}</span></h3>
+   ${cs.sort((a, b) => (a.vence || a.fecha).localeCompare(b.vence || b.fecha)).map(c => `<div class="cx"><div><b>${esc(docL(c))}</b> <small>${fdate(c.fecha)}</small>${c.vence ? `<br><small class="${c.vence < today() ? 'down' : ''}">Vence ${fdate(c.vence)}${c.vence < today() ? ' · vencida' : ''}</small>` : ''}<div class="cxb"><span>Total ${fmt(c.total)}</span><span>Pagado ${fmt(c.pagado)}</span></div></div><div style="text-align:right"><div class="cxs">${fmt(c.saldo)}</div>${['dueno', 'admin', 'cajero'].includes(rol()) ? `<button class="btn pri" style="padding:8px 14px;margin-top:6px" onclick="App.pagoProvForm('${c.id}')">Pagar</button><br>` : ''}<button class="pill" style="margin-top:6px" onclick="App.verCompra('${c.id}')">Ver</button></div></div>`).join('')}</div>`).join('') || `<div class="card c12"><div class="empty">${q ? 'Nada coincide' : 'No le debes nada a ningún proveedor 🎉'}</div></div>`}</div>`;
+};
 V.despacho = () => {
   const cli = id => db().clientes.find(c => c.id === id), q = DS.q.trim().toLowerCase();
   const all = db().ventas.filter(v => (v.items || []).length), pend = all.filter(v => v.items.some(i => !i.despachado)), done = all.filter(v => v.items.every(i => i.despachado));
@@ -547,13 +586,113 @@ const App = window.App = {
     const o = sheet(`<h2>${id ? 'Editar' : 'Nuevo'} cliente</h2><div class="sub">Para facturas, entregas y seguimiento</div><div class="fld"><label>Nombre completo</label><input class="in" id="cN" value="${esc(c.nombre || '')}"></div><div class="row2"><div class="fld"><label>Cédula / RIF</label><input class="in" id="cC" placeholder="V-" value="${esc(c.cedula || '')}"></div><div class="fld"><label>Teléfono</label><input class="in" id="cT" placeholder="0414-" inputmode="tel" value="${esc(c.telefono || '')}"></div></div><div class="fld"><label>Dirección</label><textarea class="in" id="cD" rows="3" placeholder="Sector, calle, casa, punto de referencia">${esc(c.direccion || '')}</textarea></div><button class="btn pri block" id="cOk">Guardar</button>`);
     o.querySelector('#cOk').onclick = async e => { const g = s => o.querySelector(s).value.trim(); if (!g('#cN')) return toast('Falta el nombre'); e.target.disabled = true; const d = { nombre: g('#cN'), cedula: g('#cC'), telefono: g('#cT'), direccion: g('#cD') }; try { if (id) await store.updCliente(id, d); else await store.addCliente(d); closeSheet(); toast('Cliente guardado'); render(); } catch (err) { toast(err.message); e.target.disabled = false; } };
   },
+  provForm(id, after) {
+    const p = db().proveedores.find(x => x.id === id) || {};
+    const o = sheet(`<h2>${id ? 'Editar' : 'Nuevo'} proveedor</h2><div class="sub">Para compras y cuentas por pagar</div><div class="fld"><label>Nombre o razón social</label><input class="in" id="vN" value="${esc(p.nombre || '')}"></div><div class="row2"><div class="fld"><label>RIF</label><input class="in" id="vR" placeholder="J-" value="${esc(p.rif || '')}"></div><div class="fld"><label>Teléfono</label><input class="in" id="vT" inputmode="tel" value="${esc(p.telefono || '')}"></div></div><div class="fld"><label>Persona de contacto</label><input class="in" id="vC" value="${esc(p.contacto || '')}"></div><div class="fld"><label>Dirección</label><input class="in" id="vD" value="${esc(p.direccion || '')}"></div><button class="btn pri block" id="vOk">Guardar</button>`);
+    o.querySelector('#vOk').onclick = async e => { const g = s => o.querySelector(s).value.trim(); if (!g('#vN')) return toast('Falta el nombre'); e.target.disabled = true; const d = { nombre: g('#vN'), rif: g('#vR'), telefono: g('#vT'), contacto: g('#vC'), direccion: g('#vD') }; try { let r; if (id) await store.updProveedor(id, d); else r = await store.addProveedor(d); closeSheet(); toast('Proveedor guardado'); if (after) after(r); else render(); } catch (err) { toast(err.message); e.target.disabled = false; } };
+  },
+  compraForm(st) {
+    st = st || { prov: db().proveedores[0]?.id || '', doc: 'factura', num: '', fecha: today(), cond: 'contado', dias: 30, met: 'Transferencia', nota: '', upd: true, items: [{ pid: '', nombre: '', cat: CATS()[0], cant: 1, costo: '', pct: '', precio: '' }] };
+    const METS = ['Transferencia', 'Pago móvil', 'Efectivo $', 'Efectivo Bs', 'Zelle', 'Binance', 'Punto de venta'];
+    const total = () => st.items.reduce((a, i) => a + (+i.cant || 0) * (+i.costo || 0), 0);
+    const o = sheet(`<h2>Nueva compra</h2><div class="sub">Los productos se suman al inventario al guardar</div>
+    <div class="fld"><label>Proveedor</label><div style="display:flex;gap:6px"><select class="in" id="kP" style="flex:1">${db().proveedores.map(p => `<option value="${p.id}" ${p.id === st.prov ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('') || '<option value="">— Crea un proveedor —</option>'}</select><button class="pill" id="kPn">+ Nuevo</button></div></div>
+    <div class="row2"><div class="fld"><label>Documento</label><select class="in" id="kD"><option value="factura" ${st.doc === 'factura' ? 'selected' : ''}>Factura</option><option value="nota" ${st.doc === 'nota' ? 'selected' : ''}>Nota de entrega</option></select></div><div class="fld"><label>Número</label><input class="in" id="kN" value="${esc(st.num)}" placeholder="Ej. 000123"></div></div>
+    <div class="row2"><div class="fld"><label>Fecha</label><input class="in" id="kF" type="date" value="${st.fecha}"></div><div class="fld"><label>Condición</label><select class="in" id="kC"><option value="contado" ${st.cond === 'contado' ? 'selected' : ''}>Contado</option><option value="credito" ${st.cond === 'credito' ? 'selected' : ''}>Crédito</option></select></div></div>
+    <div class="fld" id="kCx">${st.cond === 'credito' ? `<label>Días de crédito</label><input class="in" id="kV" type="number" inputmode="numeric" value="${st.dias}">` : `<label>Pagado con (sale de caja)</label><select class="in" id="kM">${METS.map(m => `<option ${m === st.met ? 'selected' : ''}>${m}</option>`).join('')}</select>`}</div>
+    <datalist id="kL">${db().productos.map(p => `<option value="${esc(p.nombre)}">`).join('')}</datalist>
+    <h3 style="margin:16px 0 8px">Productos</h3><div id="kI"></div><button class="pill" id="kAdd" style="margin-bottom:14px">+ Agregar producto</button>
+    <label style="display:flex;gap:8px;align-items:center;margin-bottom:12px;font-size:14px"><input type="checkbox" id="kU" ${st.upd ? 'checked' : ''}> Actualizar costo y precio de venta en el inventario</label>
+    <div class="sum" style="margin-top:0"><div><span>Total compra</span><b id="kT">${fmt(total(), 'USD')}</b></div><div><span style="color:var(--mut)">En bolívares</span><span id="kTb">${fmt(total(), 'VES')}</span></div></div>
+    <div class="fld"><label>Nota (opcional)</label><input class="in" id="kO" value="${esc(st.nota)}"></div>
+    <button class="btn pri block" id="kOk">Guardar compra</button>`);
+    const box = o.querySelector('#kI');
+    const tot = () => { o.querySelector('#kT').textContent = fmt(total(), 'USD'); o.querySelector('#kTb').textContent = fmt(total(), 'VES'); };
+    const pctDe = p => +p.costo > 0 && +p.precio ? ((p.precio / p.costo - 1) * 100).toFixed(1) : '';
+    const draw = () => {
+      box.innerHTML = st.items.map((it, i) => `<div class="card" style="padding:12px;margin-bottom:10px" data-r="${i}">
+      <div style="display:flex;gap:6px"><input class="in" list="kL" data-k="nombre" value="${esc(it.nombre)}" placeholder="Producto (escribe o elige)" style="flex:1">${st.items.length > 1 ? `<button class="pill" data-del="${i}">✕</button>` : ''}</div>
+      ${it.nombre && !it.pid ? `<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><small class="up" style="white-space:nowrap">✨ Nuevo</small><select class="in" data-k="cat" style="flex:1">${CATS().map(c => `<option ${c === it.cat ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>` : it.pid ? `<small style="color:var(--mut)">En inventario: ${db().productos.find(p => p.id === it.pid)?.stock ?? 0} uds · costo actual ${fmt(db().productos.find(p => p.id === it.pid)?.costo || 0, 'USD')}</small>` : ''}
+      <div style="display:grid;grid-template-columns:.7fr 1fr .8fr 1fr;gap:6px;margin-top:8px"><div><small>Cant.</small><input class="in" data-k="cant" type="number" inputmode="numeric" value="${it.cant}"></div><div><small>Costo $</small><input class="in" data-k="costo" type="number" step="0.01" inputmode="decimal" value="${it.costo}"></div><div><small>% util.</small><input class="in" data-k="pct" type="number" step="0.1" inputmode="decimal" value="${it.pct}" placeholder="30"></div><div><small>Precio venta $</small><input class="in" data-k="precio" type="number" step="0.01" inputmode="decimal" value="${it.precio}"></div></div>
+      <small data-g style="color:var(--mut)"></small></div>`).join('');
+      box.querySelectorAll('[data-r]').forEach(r => gan(r));
+    };
+    const gan = r => { const it = st.items[+r.dataset.r], c = +it.costo, v = +it.precio; r.querySelector('[data-g]').textContent = c > 0 && v > 0 ? `Gana $${(v - c).toFixed(2)} por unidad · subtotal ${fmt(c * (+it.cant || 0), 'USD')}` : ''; };
+    box.oninput = e => {
+      const r = e.target.closest('[data-r]'), k = e.target.dataset.k; if (!r || !k) return; const it = st.items[+r.dataset.r]; it[k] = e.target.value;
+      const q = s => r.querySelector(`[data-k="${s}"]`);
+      if (k === 'costo' || k === 'pct') { if (+it.costo > 0 && it.pct !== '') { it.precio = (+it.costo * (1 + +it.pct / 100)).toFixed(2); q('precio').value = it.precio; } }
+      if (k === 'precio') { if (+it.costo > 0 && it.precio !== '') { it.pct = ((+it.precio / +it.costo - 1) * 100).toFixed(1); q('pct').value = it.pct; } }
+      gan(r); tot();
+    };
+    box.onchange = e => {
+      const r = e.target.closest('[data-r]'); if (!r || e.target.dataset.k !== 'nombre') return; const it = st.items[+r.dataset.r];
+      const p = db().productos.find(p => p.nombre.toLowerCase() === it.nombre.trim().toLowerCase());
+      if (p) { it.pid = p.id; it.nombre = p.nombre; if (it.costo === '') it.costo = p.costo; it.pct = pctDe({ costo: it.costo, precio: p.precio }) || it.pct; if (it.pct !== '' && +it.costo > 0) it.precio = (+it.costo * (1 + +it.pct / 100)).toFixed(2); else it.precio = p.precio; } else it.pid = '';
+      draw(); tot();
+    };
+    box.onclick = e => { const d = e.target.dataset.del; if (d === undefined) return; st.items.splice(+d, 1); draw(); tot(); };
+    o.querySelector('#kAdd').onclick = () => { st.items.push({ pid: '', nombre: '', cat: CATS()[0], cant: 1, costo: '', pct: '', precio: '' }); draw(); box.querySelector('[data-r]:last-child input').focus(); };
+    const save = () => { st.prov = o.querySelector('#kP').value; st.doc = o.querySelector('#kD').value; st.num = o.querySelector('#kN').value; st.fecha = o.querySelector('#kF').value; st.nota = o.querySelector('#kO').value; st.upd = o.querySelector('#kU').checked; const v = o.querySelector('#kV'), m = o.querySelector('#kM'); if (v) st.dias = +v.value || 0; if (m) st.met = m.value; };
+    o.querySelector('#kC').onchange = e => { save(); st.cond = e.target.value; closeSheet(); this.compraForm(st); };
+    o.querySelector('#kPn').onclick = () => { save(); closeSheet(); this.provForm(null, r => { if (r) st.prov = r.id; this.compraForm(st); }); };
+    o.querySelector('#kOk').onclick = async e => {
+      save(); if (!st.prov) return toast('Elige o crea el proveedor');
+      const its = st.items.filter(i => i.nombre.trim());
+      if (!its.length) return toast('Agrega al menos un producto');
+      if (its.some(i => !(+i.cant > 0) || !(+i.costo >= 0) || i.costo === '')) return toast('Revisa cantidad y costo de cada producto');
+      const t = +total().toFixed(2), vence = st.cond === 'credito' ? new Date(new Date(st.fecha + 'T12:00').getTime() + st.dias * 864e5).toISOString().slice(0, 10) : null;
+      e.target.disabled = true; e.target.textContent = 'Guardando…';
+      try {
+        const c = await store.addCompra({ proveedor_id: st.prov, doc_tipo: st.doc, doc_numero: st.num.trim() || null, fecha: st.fecha, condicion: st.cond, vence, metodo: st.cond === 'contado' ? st.met : null, nota: st.nota.trim() || null, actualizar_costo: st.upd, pagos: st.cond === 'contado' ? [{ metodo: st.met, moneda: '$', monto: t, usd: t }] : null, items: its.map(i => ({ producto_id: i.pid || null, nombre: i.nombre.trim(), categoria: i.cat, cant: +i.cant, costo: +i.costo, precio: i.precio === '' ? null : +i.precio })) });
+        closeSheet(); render(); toast(`Compra #${c.numero} guardada · ${its.reduce((a, i) => a + +i.cant, 0)} uds al inventario ✅`);
+      } catch (err) { toast('Error: ' + err.message); e.target.disabled = false; e.target.textContent = 'Guardar compra'; }
+    };
+    draw();
+  },
+  verCompra(id) {
+    const c = db().compras.find(x => x.id === id), pg = db().pagosProv.filter(x => x.compraId === id);
+    sheet(`<h2>Compra #${c.numero}</h2><div class="sub">${esc(provN(c.proveedorId))} · ${esc(docL(c))} · ${fdate(c.fecha)}${c.usuario ? ' · ' + esc(c.usuario) : ''}</div>
+    <table class="tbl"><thead><tr><th>Producto</th><th>Cant.</th><th>Costo</th><th>Subtotal</th></tr></thead><tbody>${(c.items || []).map(i => `<tr><td>${esc(i.nombre)}</td><td>${i.cant}</td><td>${fmt(+i.costo)}</td><td>${fmt(i.cant * i.costo)}</td></tr>`).join('')}</tbody></table>
+    <div class="sum"><div><span>Total</span><b>${fmt(c.total)}</b></div><div><span>${c.condicion === 'credito' ? 'Crédito' + (c.vence ? ', vence ' + fdate(c.vence) : '') : 'Contado'}</span><span>Pagado ${fmt(c.pagado)}</span></div>${c.saldo > 0.009 ? `<div><span>Saldo</span><b class="down">${fmt(c.saldo)}</b></div>` : ''}</div>
+    ${pg.length ? `<h3 style="margin:14px 0 6px">Pagos</h3><table class="tbl"><tbody>${pg.map(x => `<tr><td>${fdate(x.fecha)}</td><td>${esc(x.metodo || '')}${x.nota ? `<br><small>${esc(x.nota)}</small>` : ''}</td><td style="text-align:right">${fmt(x.monto)}</td>${esJefe() && c.condicion === 'credito' ? `<td><button class="pill" onclick="App.delPagoProv('${x.id}','${c.id}')">✕</button></td>` : ''}</tr>`).join('')}</tbody></table>` : ''}
+    ${c.nota ? `<p style="color:var(--mut)">${esc(c.nota)}</p>` : ''}
+    <div class="row2" style="margin-top:12px">${c.saldo > 0.009 && ['dueno', 'admin', 'cajero'].includes(rol()) ? `<button class="btn pri" onclick="document.querySelector('.ov').remove();App.pagoProvForm('${c.id}')">Pagar</button>` : '<span></span>'}${esJefe() ? `<button class="btn gh" onclick="App.anularCompra('${c.id}')">Anular compra</button>` : ''}</div>`);
+  },
+  async delPagoProv(pid, cid) { if (!confirm('¿Borrar este pago?')) return; try { await store.delPagoProv(pid); closeSheet(); render(); this.verCompra(cid); } catch (e) { toast('Error: ' + e.message); } },
+  async anularCompra(id) {
+    const c = db().compras.find(x => x.id === id), m = prompt(`¿Anular la compra #${c.numero}? Se restan del inventario los productos que entraron y se borran sus pagos.\nEscribe el motivo:`);
+    if (m === null) return; if (!m.trim()) return toast('Escribe el motivo');
+    try { await store.anularCompra(id, m.trim()); closeSheet(); render(); toast(`Compra #${c.numero} anulada`); } catch (e) { toast('Error: ' + e.message); }
+  },
+  pagoProvForm(id) {
+    const c = db().compras.find(x => x.id === id), T = db().tasa.valor, METS = ['Transferencia', 'Pago móvil', 'Efectivo $', 'Efectivo Bs', 'Zelle', 'Binance', 'Punto de venta'];
+    const o = sheet(`<h2>Pago a proveedor</h2><div class="sub">${esc(provN(c.proveedorId))} · ${esc(docL(c))}</div>
+    <div class="sum" style="margin-top:0"><div><span>Saldo</span><b>${fmt(c.saldo, 'USD')}</b></div><div><span style="color:var(--mut)">En bolívares</span><span>${fmt(c.saldo, 'VES')}</span></div></div>
+    <div class="fld"><label>Método</label><select class="in" id="pM">${METS.map(m => `<option>${m}</option>`).join('')}</select></div>
+    <div class="row2"><div class="fld"><label>Monto</label><input class="in" id="pV" type="number" step="0.01" inputmode="decimal" placeholder="0.00"></div><div class="fld"><label>Moneda</label><select class="in" id="pC"><option>$</option><option selected>Bs</option></select></div></div>
+    <div id="pMsg" style="margin:-4px 0 12px;font-size:13px"></div><button class="pill" id="pTodo" style="margin-bottom:12px">Pagar todo el saldo</button>
+    <div class="fld"><label>Nota (opcional)</label><input class="in" id="pN" placeholder="Ej. referencia"></div>
+    <button class="btn pri block" id="pOk">Guardar pago</button>`);
+    const usd = () => { const m = +o.querySelector('#pV').value || 0; return o.querySelector('#pC').value === 'Bs' ? m / T : m; };
+    const msg = () => { const u = usd(), r = c.saldo - u; o.querySelector('#pMsg').innerHTML = !u ? '' : r < -0.01 ? `<span class="down">Pasa del saldo por ${fmt(-r, 'USD')}</span>` : `<span class="up">${fmt(u, 'USD')} · queda ${fmt(Math.max(0, r), 'USD')}</span>`; };
+    o.querySelector('#pM').onchange = e => { o.querySelector('#pC').value = /\$|Zelle|Binance/.test(e.target.value) ? '$' : 'Bs'; msg(); };
+    o.querySelector('#pV').oninput = msg; o.querySelector('#pC').onchange = msg;
+    o.querySelector('#pTodo').onclick = () => { const bs = o.querySelector('#pC').value === 'Bs'; o.querySelector('#pV').value = (bs ? c.saldo * T : c.saldo).toFixed(2); msg(); };
+    o.querySelector('#pOk').onclick = async e => {
+      const u = +usd().toFixed(2); if (!(u > 0)) return toast('Escribe el monto'); if (u > c.saldo + 0.01) return toast('El pago pasa del saldo');
+      e.target.disabled = true; e.target.textContent = 'Guardando…';
+      try { const m = o.querySelector('#pM').value, mon = o.querySelector('#pC').value, mo = +(+o.querySelector('#pV').value).toFixed(2), x = Math.min(u, c.saldo); await store.addPagoProv({ compraId: c.id, proveedorId: c.proveedorId, monto: x, metodo: m, pagos: [{ metodo: m, moneda: mon, monto: mo, usd: x }], nota: o.querySelector('#pN').value.trim() }); closeSheet(); render(); toast('Pago registrado ✅'); }
+      catch (err) { toast('Error: ' + err.message); e.target.disabled = false; e.target.textContent = 'Guardar pago'; }
+    };
+  },
   gastoForm() {
     const o = sheet(`<h2>Registrar gasto</h2><div class="sub">Sale de la caja de hoy</div><div class="fld"><label>Concepto</label><input class="in" id="gC"></div><div class="row2"><div class="fld"><label>Monto $</label><input class="in" id="gM" type="number" step="0.01"></div><div class="fld"><label>Categoría</label><select class="in" id="gK">${['Fijos', 'Nómina', 'Logística', 'Mercadeo', 'Servicios', 'Otros'].map(c => `<option>${c}</option>`).join('')}</select></div></div><button class="btn pri block" id="gOk">Guardar</button>`);
     o.querySelector('#gOk').onclick = async () => { const g = s => o.querySelector(s).value; if (!g('#gC') || !+g('#gM')) return toast('Completa concepto y monto'); await store.addGasto({ concepto: g('#gC'), monto: +g('#gM'), categoria: g('#gK') }); closeSheet(); render(); };
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=22'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=23'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -697,7 +836,7 @@ function loginView(modo = 'entrar', msg = '') {
 }
 
 // ---------- render ----------
-const TITLES = { despacho: ['Por despachar', 'Marca cada producto cuando sale del almacén'], ventas: ['Ventas', 'Todas las ventas, con filtros y tickets'], reportes: ['Reportes', 'Ventas y Cashea por período'], tablero: ['Tablero gerencial', 'Lo que pasa en tu negocio, en una mirada'], vender: ['Punto de venta', 'Contado o Cashea, en segundos'], inventario: ['Inventario', 'Existencias, costos y márgenes'], cashea: ['Cuentas por cobrar', 'Crédito propio y Cashea'], caja: ['Caja del día', 'Entradas, gastos y saldo'], clientes: ['Clientes', 'Tu cartera y su historial'], ajustes: ['Ajustes', 'Tasa, comisiones, usuarios y respaldo'] };
+const TITLES = { compras: ['Compras', 'Facturas y notas de entrega que cargan el inventario'], porpagar: ['Cuentas por pagar', 'Lo que le debes a tus proveedores'], despacho: ['Por despachar', 'Marca cada producto cuando sale del almacén'], ventas: ['Ventas', 'Todas las ventas, con filtros y tickets'], reportes: ['Reportes', 'Ventas y Cashea por período'], tablero: ['Tablero gerencial', 'Lo que pasa en tu negocio, en una mirada'], vender: ['Punto de venta', 'Contado o Cashea, en segundos'], inventario: ['Inventario', 'Existencias, costos y márgenes'], cashea: ['Cuentas por cobrar', 'Crédito propio y Cashea'], caja: ['Caja del día', 'Entradas, gastos y saldo'], clientes: ['Clientes', 'Tu cartera y su historial'], ajustes: ['Ajustes', 'Tasa, comisiones, usuarios y respaldo'] };
 function render() {
   if (!db().usuario) return loginView();
   if (!db().usuario.activo) return loginView('entrar', `Hola ${esc(db().usuario.nombre)}, tu usuario está creado. El dueño debe activarlo en Ajustes → Usuarios. <br><br><a href="#" onclick="App.logout();return false" style="color:var(--amber2)">Cerrar sesión</a>`);
