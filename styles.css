@@ -177,3 +177,15 @@ select.in option{background:#0C1322}
 .dsp{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer}.dsp input{width:24px;height:24px;accent-color:#2fbf71;flex:none}.dsp small{display:block;color:var(--mut);font-size:11px;font-weight:400}.dsp.ok{background:rgba(47,191,113,.08);border-color:rgba(47,191,113,.35)}.dsp.ok b{text-decoration:line-through;opacity:.75}
 @media (max-width:900px){.dock{overflow-x:auto;justify-content:flex-start;scrollbar-width:none}.dock::-webkit-scrollbar{display:none}.dock a{flex:0 0 auto;min-width:58px;font-size:9.5px;padding:6px 4px}}
 .dspb .btn{flex:1;min-width:130px}
+
+/* v30: venta actual como panel deslizable en celular */
+.cbar{display:none}
+@media (max-width:900px){
+  .posL{grid-column:span 12 !important;padding-bottom:70px}
+  .posC{position:fixed !important;top:auto !important;left:12px;right:12px;bottom:86px;z-index:44;padding:0;max-height:72vh;overflow:auto;background:rgba(14,22,40,.96);backdrop-filter:blur(20px);box-shadow:0 -10px 30px rgba(0,0,0,.45)}
+  .cbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;font-size:15px;cursor:pointer;position:sticky;top:0;background:linear-gradient(135deg,var(--amber),#F08A0C);color:#1a1205;font-weight:600;border-radius:inherit}
+  .posC.open .cbar{border-radius:0}
+  .posC:not(.open) .cbody{display:none}
+  .posC.open .cbody{padding:16px 18px;animation:cup .28s ease-out}
+  @keyframes cup{from{transform:translateY(30px);opacity:0}}
+}

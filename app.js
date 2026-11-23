@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=29';
+import { store, today, daysAgo } from './store.js?v=30';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -121,13 +121,13 @@ V.vender = () => {
   const q = (window._q || '').toLowerCase();
   const ps = db().productos.filter(p => !q || p.nombre.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q));
   const tot = cart.reduce((a, i) => a + i.precio * i.cant, 0);
-  return `<div class="grid"><div class="c8" style="grid-column:span 8">
+  return `<div class="grid"><div class="c8 posL" style="grid-column:span 8">
   <input class="in" placeholder="🔎  Buscar producto…" value="${esc(window._q || '')}" oninput="window._q=this.value;App.go('vender',true)" style="margin-bottom:14px;padding:15px 18px;font-size:16px" ${window._q ? 'autofocus' : ''}>
   <div class="tiles">${ps.map((p, i) => `<div class="tile" style="animation-delay:${i * 25}ms;${p.stock <= 0 && !p.varios ? 'opacity:.4' : ''}" onclick="App.addCart('${p.id}')"><div class="ic">${p.icono}</div><b>${esc(p.nombre)}</b><small>${p.varios ? 'Precio libre' : esc(p.categoria) + ' · ' + p.stock + ' disp.'}</small><div class="row"><span class="pr">${p.varios ? '$ —' : fmt(p.precio)}${+p.precio2 ? `<small style="display:block;font-size:11px;color:var(--mut);font-weight:400">P2 ${fmt(p.precio2)}</small>` : ''}</span><span class="tag t-am">+ Agregar</span></div></div>`).join('')}</div></div>
-  <div class="card c4" style="grid-column:span 4;align-self:start;position:sticky;top:20px"><h3>Venta actual <span>${cart.length ? `<button class="pill del" onclick="App.vaciar()">Vaciar</button> ` : ''}${cart.length}</span></h3>
+  <div class="card c4 posC${window._cartOpen ? ' open' : ''}" style="grid-column:span 4;align-self:start;position:sticky;top:20px"><div class="cbar" onclick="App.tgCart()"><span>🛒 ${cart.reduce((a, i) => a + i.cant, 0)} · <b>${fmt(tot, 'USD')}</b></span><span>${window._cartOpen ? 'Ocultar ▼' : 'Ver venta ▲'}</span></div><div class="cbody"><h3>Venta actual <span>${cart.length ? `<button class="pill del" onclick="App.vaciar()">Vaciar</button> ` : ''}${cart.length}</span></h3>
   ${cart.length ? cart.map(i => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div><b style="font-size:14px">${esc(i.nombre)}</b><br><small style="color:var(--mut)">${fmt(i.precio)}</small>${i.p2 ? ` <span class="pp"><button class="${i.nivel === 1 ? 'on' : ''}" onclick="App.nivel('${i.k}',1)">P1</button><button class="${i.nivel === 2 ? 'on' : ''}" onclick="App.nivel('${i.k}',2)">P2</button></span>` : ''}</div><div style="display:flex;gap:6px;align-items:center"><button class="pill" onclick="App.qty('${i.k}',-1)">−</button>${i.cant}<button class="pill" onclick="App.qty('${i.k}',1)">+</button><button class="pill del" title="Quitar" onclick="App.quitar('${i.k}')">🗑</button></div></div>`).join('') : '<div class="empty">Toca un producto para agregarlo</div>'}
   <div class="sum"><div class="tot"><span>Total</span><span>${fmt(tot, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares</span><span>${fmt(tot, 'VES')}</span></div></div>
-  <button class="btn pri block" ${cart.length ? '' : 'disabled style="opacity:.4"'} onclick="App.checkout()">Cobrar →</button></div></div>`;
+  <button class="btn pri block" ${cart.length ? '' : 'disabled style="opacity:.4"'} onclick="App.checkout()">Cobrar →</button></div></div></div>`;
 };
 
 V.inventario = () => {
@@ -482,6 +482,7 @@ const App = window.App = {
     o.querySelector('#xOk').onclick = () => { const u = +usd().toFixed(2), c = Math.max(1, +o.querySelector('#xC').value || 1), d = o.querySelector('#xD').value.trim() || 'Producto Varios'; if (!(u > 0)) return toast('Escribe el precio'); cart.push({ k: 'v' + Date.now(), productoId: p.id, nombre: d, precio: u, p1: u, p2: 0, nivel: 1, cant: c, varios: true }); closeSheet(); render(); };
   },
   quitar(id) { cart = cart.filter(i => i.k !== id); render(); toast('Artículo quitado'); },
+  tgCart() { window._cartOpen = !window._cartOpen; render(); },
   vaciar() { if (!confirm('¿Vaciar toda la venta actual?')) return; cart = []; render(); },
   qty(id, d) { const it = cart.find(i => i.k === id); it.cant += d; if (it.cant <= 0) cart = cart.filter(i => i !== it); render(); },
   checkout() {
@@ -708,7 +709,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=29'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=30'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
