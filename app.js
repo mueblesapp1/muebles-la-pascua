@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=48';
+import { store, today, daysAgo } from './store.js?v=49';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -421,13 +421,18 @@ const App = window.App = {
     };
   },
   reciboAbono(id, monto, pagos) {
-    const v = db().ventas.find(x => x.id === id), c = db().clientes.find(x => x.id === v.clienteId), tel = c?.telefono ? '58' + c.telefono.replace(/\D/g, '').replace(/^0/, '') : '';
-    const txt = `*${TK().nombre}*\nAbono a la nota #${v.numero}\nAbono recibido: $${monto.toFixed(2)} (Bs ${(monto * db().tasa.valor).toFixed(2)})\nSaldo pendiente: $${v.saldo.toFixed(2)}${v.saldo <= 0.009 ? '\n¡Cuenta saldada! Gracias.' : '\n¡Gracias!'}`;
+    const v = db().ventas.find(x => x.id === id), c = db().clientes.find(x => x.id === v.clienteId), n = waNum(c?.telefono), mov = esMovil();
+    const url = mov ? `whatsapp://send?phone=${n}` : `https://wa.me/${n}`;
     sheet(`<div style="text-align:center;padding-top:20px"><div style="font-size:64px">✅</div><h2>Abono registrado</h2><div class="sub">${v.saldo <= 0.009 ? '¡Cuenta saldada!' : 'Saldo pendiente ' + fmt(v.saldo, 'USD')}</div></div>
-    <img id="tkImg" class="tkprev" alt="Comprobante"><button class="btn pri block" id="tkSh" disabled>Preparando comprobante…</button>
-    <a class="btn gh block" style="margin-top:10px" target="_blank" href="https://wa.me/${tel}?text=${encodeURIComponent(txt)}">Enviar como texto por WhatsApp</a>
+    <button class="btn pri block" id="tkSh" style="margin-top:12px" disabled>Preparando comprobante…</button>
+    <div style="text-align:center;font-size:13px;color:var(--mut);margin-top:8px">Se copia la imagen y se abre el chat del cliente: mantén presionado y toca <b>Pegar</b>.</div>
+    <img id="tkImg" class="tkprev" alt="Comprobante">
     <button class="btn gh block" style="margin-top:10px" onclick="document.querySelector('.ov').remove()">Listo</button>`);
-    ticketBlob({ ...v, abono: monto, pagos }).then(b => { const im = document.querySelector('#tkImg'), bt = document.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); if (!bt) return; bt.disabled = false; bt.textContent = '🧾 Enviar comprobante (imagen)'; bt.onclick = () => shareTicket(b, 'abono-' + v.numero); });
+    ticketBlob({ ...v, abono: monto, pagos }).then(b => { const im = document.querySelector('#tkImg'), bt = document.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); if (!bt) return;
+      if (!n) { bt.textContent = 'Cliente sin teléfono'; bt.style.opacity = .45; return; }
+      bt.disabled = false; bt.textContent = '📲 Enviar comprobante al cliente';
+      bt.onclick = async () => { let ok = false; try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]); ok = true; } catch (e) { } if (!ok) { await shareTicket(b, 'abono-' + v.numero); return; }
+        bt.classList.remove('pri'); bt.classList.add('gh'); bt.textContent = '✓ Enviar comprobante al cliente'; toast('Comprobante copiado. En WhatsApp: mantén presionado y Pegar'); if (mov) location.href = url; else window.open(url, '_blank'); }; });
   },
   historial(id) {
     const v = db().ventas.find(x => x.id === id), ab = db().abonos.filter(x => x.ventaId === id);
@@ -730,7 +735,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=48'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=49'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
