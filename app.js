@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=42';
+import { store, today, daysAgo } from './store.js?v=43';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -573,11 +573,10 @@ const App = window.App = {
     <button class="btn ${nDue ? 'gh' : 'gh'} block" id="waDue" style="margin-top:10px" disabled>Preparando ticket…</button>
     <div id="waMsg" style="text-align:center;font-size:13px;color:var(--mut);margin-top:8px">Se copia la imagen del ticket y se abre el chat: mantén presionado el mensaje y toca <b>Pegar</b>.</div>
     <img id="tkImg" class="tkprev" alt="Ticket">
-    <button class="btn gh block" id="tkSh" disabled>Compartir ticket…</button>
     <button class="btn gh block" style="margin-top:10px" onclick="document.querySelector('.ov').remove()">Listo</button>`);
     ticketBlob(v).then(b => {
       const im = document.querySelector('#tkImg'); if (!im) return; im.src = URL.createObjectURL(b);
-      const sh = document.querySelector('#tkSh'); sh.disabled = false; sh.textContent = '🧾 Compartir ticket (elegir contacto)'; sh.onclick = () => shareTicket(b, v.numero);
+      const sh = document.querySelector('#tkSh'); if (sh) { sh.disabled = false; sh.textContent = '🧾 Compartir ticket (elegir contacto)'; sh.onclick = () => shareTicket(b, v.numero); }
       const prep = (id, n, txt, lbl, falta, sig) => { const bt = document.querySelector(id); if (!n) { bt.textContent = falta; bt.style.opacity = .45; bt.disabled = true; return; } bt.disabled = false; bt.textContent = lbl;
         bt.onclick = async () => { let okc = false; try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]); okc = true; } catch (e) { } if (!okc) { await shareTicket(b, v.numero); return; }
           bt.classList.remove('pri'); bt.classList.add('gh'); bt.textContent = '✓ ' + lbl; if (sig) { const s2 = document.querySelector(sig); if (s2 && !s2.disabled) { s2.classList.remove('gh'); s2.classList.add('pri'); } }
@@ -728,7 +727,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=42'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=43'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
