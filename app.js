@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=43';
+import { store, today, daysAgo } from './store.js?v=44';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -573,7 +573,7 @@ const App = window.App = {
     <button class="btn ${nDue ? 'gh' : 'gh'} block" id="waDue" style="margin-top:10px" disabled>Preparando ticket…</button>
     <div id="waMsg" style="text-align:center;font-size:13px;color:var(--mut);margin-top:8px">Se copia la imagen del ticket y se abre el chat: mantén presionado el mensaje y toca <b>Pegar</b>.</div>
     <img id="tkImg" class="tkprev" alt="Ticket">
-    <button class="btn gh block" style="margin-top:10px" onclick="document.querySelector('.ov').remove()">Listo</button>`);
+    <button class="btn gh block" style="margin-top:10px" onclick="document.querySelector('.ov').remove();window._cartOpen=false;App.go('vender')">Listo</button>`);
     ticketBlob(v).then(b => {
       const im = document.querySelector('#tkImg'); if (!im) return; im.src = URL.createObjectURL(b);
       const sh = document.querySelector('#tkSh'); if (sh) { sh.disabled = false; sh.textContent = '🧾 Compartir ticket (elegir contacto)'; sh.onclick = () => shareTicket(b, v.numero); }
@@ -727,7 +727,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=43'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=44'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
