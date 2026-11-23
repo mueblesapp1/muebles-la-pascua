@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=50';
+import { store, today, daysAgo } from './store.js?v=51';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -228,6 +228,8 @@ V.cashea = () => {
 const VF = window.VF = { modo: 'hoy', d: today(), h: today(), tipo: '', q: '', vend: '' };
 const tipoTag = v => `<span class="tag ${v.tipo === 'cashea' ? 't-vi' : v.tipo === 'credito' ? 't-am' : 't-ok'}">${{ cashea: 'Cashea', credito: 'Crédito' }[v.tipo] || 'Contado'}</span>`;
 const esMovil = () => matchMedia('(max-width:900px)').matches || /iPhone|iPad|Android/i.test(navigator.userAgent);
+const pDe = (c, u) => u < 100 ? (c / (1 - u / 100)).toFixed(2) : '';
+const uDe = (c, p) => +p > 0 ? ((1 - c / p) * 100).toFixed(1) : '';
 const waNum = t => t ? '58' + String(t).replace(/\D/g, '').replace(/^58/, '').replace(/^0/, '') : '';
 V.ventas = () => {
   const [d, h] = VF.modo === 'todas' ? ['0000', '9999'] : rango(VF), q = VF.q.trim().toLowerCase(), cli = id => db().clientes.find(c => c.id === id);
@@ -606,7 +608,7 @@ const App = window.App = {
     <div class="row2"><div class="fld"><label>Ícono</label><button type="button" class="in emo-btn" id="pIb">${p.icono}</button><input type="hidden" id="pI" value="${p.icono}"></div><div class="fld"><label>Categoría</label><select class="in" id="pC">${CATS(p.categoria).map(c => `<option ${c === p.categoria ? 'selected' : ''}>${esc(c)}</option>`).join('')}${esJefe() ? '<option value="__new">+ Nueva categoría…</option>' : ''}</select></div></div>
     <div class="emo" id="pEmo" hidden>${EMOJIS.map(e => `<button type="button">${e}</button>`).join('')}<div class="emo-otro"><input class="in" id="pEo" placeholder="Otro emoji (toca 🌐 o 😀 en el teclado)"><button type="button" class="btn pri" id="pEok">Usar</button></div></div>
     <div class="fld"><label>Nombre</label><input class="in" id="pN" value="${esc(p.nombre)}"></div>
-    <div class="row3"><div class="fld"><label>Costo $</label><input class="in" id="pCo" type="number" step="0.01" inputmode="decimal" value="${p.costo}"></div><div class="fld"><label>% utilidad 1</label><input class="in" id="pU" type="number" step="0.1" inputmode="decimal" placeholder="30" value="${+p.costo > 0 && +p.precio ? ((p.precio / p.costo - 1) * 100).toFixed(1) : ''}"></div><div class="fld"><label>Precio 1 $</label><input class="in" id="pP" type="number" step="0.01" inputmode="decimal" value="${p.precio}"></div></div><div class="row3"><div class="fld"><label>Precio 2</label><div class="in" style="opacity:.5;text-align:center">opcional</div></div><div class="fld"><label>% utilidad 2</label><input class="in" id="pU2" type="number" step="0.1" inputmode="decimal" placeholder="20" value="${+p.costo > 0 && +p.precio2 ? ((p.precio2 / p.costo - 1) * 100).toFixed(1) : ''}"></div><div class="fld"><label>Precio 2 $</label><input class="in" id="pP2" type="number" step="0.01" inputmode="decimal" value="${p.precio2 ?? ''}"></div></div><div class="sub" id="pGan" style="margin:-4px 0 12px"></div>
+    <div class="row3"><div class="fld"><label>Costo $</label><input class="in" id="pCo" type="number" step="0.01" inputmode="decimal" value="${p.costo}"></div><div class="fld"><label>% utilidad 1</label><input class="in" id="pU" type="number" step="0.1" inputmode="decimal" placeholder="30" value="${+p.costo > 0 && +p.precio ? uDe(p.costo, p.precio) : ''}"></div><div class="fld"><label>Precio 1 $</label><input class="in" id="pP" type="number" step="0.01" inputmode="decimal" value="${p.precio}"></div></div><div class="row3"><div class="fld"><label>Precio 2</label><div class="in" style="opacity:.5;text-align:center">opcional</div></div><div class="fld"><label>% utilidad 2</label><input class="in" id="pU2" type="number" step="0.1" inputmode="decimal" placeholder="20" value="${+p.costo > 0 && +p.precio2 ? uDe(p.costo, p.precio2) : ''}"></div><div class="fld"><label>Precio 2 $</label><input class="in" id="pP2" type="number" step="0.01" inputmode="decimal" value="${p.precio2 ?? ''}"></div></div><div class="sub" id="pGan" style="margin:-4px 0 12px"></div>
     <div class="row2"><div class="fld"><label>Existencia</label><input class="in" id="pS" type="number" value="${p.stock}"></div><div class="fld"><label>Stock mínimo</label><input class="in" id="pM" type="number" value="${p.min}"></div></div>
     <div class="fld"><label>Garantía (meses)</label><input class="in" id="pG" type="number" value="${p.garantiaMeses}"></div>
     <button class="btn pri block" id="pOk">Guardar</button>${id ? `<button class="btn gh block" style="margin-top:10px" id="pDel">Retirar del catálogo</button>` : ''}`);
@@ -617,10 +619,10 @@ const App = window.App = {
     o.querySelector('#pEok').onclick = () => { const i = o.querySelector('#pEo'), v = i.value.trim(); if (!v) return toast('Escribe o pega un emoji'); const seg = window.Intl?.Segmenter ? [...new Intl.Segmenter().segment(v)][0].segment : [...v][0]; setE(seg); i.value = ''; };
     o.querySelector('#pC').onchange = async e => { if (e.target.value !== '__new') return; const n = (prompt('Nombre de la nueva categoría') || '').trim(); if (!n) { e.target.selectedIndex = 0; return; } try { if (!db().config.categorias.includes(n)) await store.setCategorias([...db().config.categorias, n]); const op = new Option(n, n, true, true); e.target.add(op, e.target.options.length - 1); toast('Categoría agregada'); } catch (err) { toast('Error: ' + err.message); e.target.selectedIndex = 0; } };
     const co = o.querySelector('#pCo'), pu = o.querySelector('#pU'), pp = o.querySelector('#pP'), gan = () => { const c = +co.value, v = +pp.value; o.querySelector('#pGan').textContent = c > 0 && v > 0 ? `Ganancia por unidad: $${(v - c).toFixed(2)} · margen sobre venta ${((v - c) / v * 100).toFixed(1)}%` : ''; };
-    const pu2 = o.querySelector('#pU2'), pp2 = o.querySelector('#pP2'), calc2 = () => { if (+co.value > 0 && pu2.value !== '') pp2.value = (+co.value * (1 + +pu2.value / 100)).toFixed(2); };
-    pu2.oninput = calc2; pp2.oninput = () => { if (+co.value > 0 && pp2.value !== '') pu2.value = ((+pp2.value / +co.value - 1) * 100).toFixed(1); };
-    const calcP = () => { if (+co.value > 0 && pu.value !== '') pp.value = (+co.value * (1 + +pu.value / 100)).toFixed(2); calc2(); gan(); };
-    co.oninput = calcP; pu.oninput = calcP; pp.oninput = () => { if (+co.value > 0 && pp.value !== '') pu.value = ((+pp.value / +co.value - 1) * 100).toFixed(1); gan(); }; gan();
+    const pu2 = o.querySelector('#pU2'), pp2 = o.querySelector('#pP2'), calc2 = () => { if (+co.value > 0 && pu2.value !== '') pp2.value = pDe(+co.value, +pu2.value); };
+    pu2.oninput = calc2; pp2.oninput = () => { if (+co.value > 0 && pp2.value !== '') pu2.value = uDe(+co.value, +pp2.value); };
+    const calcP = () => { if (+co.value > 0 && pu.value !== '') pp.value = pDe(+co.value, +pu.value); calc2(); gan(); };
+    co.oninput = calcP; pu.oninput = calcP; pp.oninput = () => { if (+co.value > 0 && pp.value !== '') pu.value = uDe(+co.value, +pp.value); gan(); }; gan();
     o.querySelector('#pOk').onclick = async () => { const d = { nombre: g('#pN'), categoria: g('#pC'), icono: g('#pI') || '📦', costo: +g('#pCo'), precio: +g('#pP'), precio2: +g('#pP2') || null, stock: +g('#pS'), min: +g('#pM'), garantia_meses: +g('#pG') }; if (!d.nombre) return toast('Falta el nombre'); try { if (id) await store.updProducto(id, d); else await store.addProducto({ ...d, garantiaMeses: d.garantia_meses }); closeSheet(); toast('Guardado'); render(); } catch (e) { toast(e.message); } };
     if (id) o.querySelector('#pDel').onclick = async () => { await store.updProducto(id, { activo: false }); closeSheet(); render(); };
   },
@@ -651,7 +653,7 @@ const App = window.App = {
     <button class="btn pri block" id="kOk">Guardar compra</button>`);
     const box = o.querySelector('#kI');
     const tot = () => { o.querySelector('#kT').textContent = fmt(total(), 'USD'); o.querySelector('#kTb').textContent = fmt(total(), 'VES'); };
-    const pctDe = p => +p.costo > 0 && +p.precio ? ((p.precio / p.costo - 1) * 100).toFixed(1) : '';
+    const pctDe = p => +p.costo > 0 && +p.precio ? uDe(p.costo, p.precio) : '';
     const draw = () => {
       box.innerHTML = st.items.map((it, i) => `<div class="card" style="padding:12px;margin-bottom:10px" data-r="${i}">
       <div style="display:flex;gap:6px"><input class="in" list="kL" data-k="nombre" value="${esc(it.nombre)}" placeholder="Producto (escribe o elige)" style="flex:1">${st.items.length > 1 ? `<button class="pill" data-del="${i}">✕</button>` : ''}</div>
@@ -664,14 +666,14 @@ const App = window.App = {
     box.oninput = e => {
       const r = e.target.closest('[data-r]'), k = e.target.dataset.k; if (!r || !k) return; const it = st.items[+r.dataset.r]; it[k] = e.target.value;
       const q = s => r.querySelector(`[data-k="${s}"]`);
-      if (k === 'costo' || k === 'pct') { if (+it.costo > 0 && it.pct !== '') { it.precio = (+it.costo * (1 + +it.pct / 100)).toFixed(2); q('precio').value = it.precio; } }
-      if (k === 'precio') { if (+it.costo > 0 && it.precio !== '') { it.pct = ((+it.precio / +it.costo - 1) * 100).toFixed(1); q('pct').value = it.pct; } }
+      if (k === 'costo' || k === 'pct') { if (+it.costo > 0 && it.pct !== '') { it.precio = pDe(+it.costo, +it.pct); q('precio').value = it.precio; } }
+      if (k === 'precio') { if (+it.costo > 0 && it.precio !== '') { it.pct = uDe(+it.costo, +it.precio); q('pct').value = it.pct; } }
       gan(r); tot();
     };
     box.onchange = e => {
       const r = e.target.closest('[data-r]'); if (!r || e.target.dataset.k !== 'nombre') return; const it = st.items[+r.dataset.r];
       const p = db().productos.find(p => !p.varios && p.nombre.toLowerCase() === it.nombre.trim().toLowerCase());
-      if (p) { it.pid = p.id; it.nombre = p.nombre; if (it.costo === '') it.costo = p.costo; it.pct = pctDe({ costo: it.costo, precio: p.precio }) || it.pct; if (it.pct !== '' && +it.costo > 0) it.precio = (+it.costo * (1 + +it.pct / 100)).toFixed(2); else it.precio = p.precio; } else it.pid = '';
+      if (p) { it.pid = p.id; it.nombre = p.nombre; if (it.costo === '') it.costo = p.costo; it.pct = pctDe({ costo: it.costo, precio: p.precio }) || it.pct; if (it.pct !== '' && +it.costo > 0) it.precio = pDe(+it.costo, +it.pct); else it.precio = p.precio; } else it.pid = '';
       draw(); tot();
     };
     box.onclick = e => { const d = e.target.dataset.del; if (d === undefined) return; st.items.splice(+d, 1); draw(); tot(); };
@@ -735,7 +737,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=50'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=51'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
