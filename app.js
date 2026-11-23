@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=31';
+import { store, today, daysAgo } from './store.js?v=32';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -729,7 +729,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=31'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=32'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -891,8 +891,9 @@ function render() {
   <div class="foot">Tasa BCV <b style="color:var(--amber2)">${db().tasa.valor}</b> Bs/$<br><span class="kbd">Ctrl K</span> búsqueda rápida</div></aside>
   <main class="main"><div class="top"><h1>${t}<small>${s}</small></h1><span class="pill hide-m" onclick="App.palette()">🔎 Buscar <span class="kbd">Ctrl K</span></span><div class="cur"><button class="${CUR === 'USD' ? 'on' : ''}" onclick="App.setCur('USD')">$</button><button class="${CUR === 'VES' ? 'on' : ''}" onclick="App.setCur('VES')">Bs</button></div></div>
   <div id="view">${V[p]()}</div></main></div>
-  <nav class="dock">${nav.map(([k, l, i]) => `<a href="#${k}" class="${k === p ? 'on' : ''}" onclick="App.go('${k}');return false">${ico(i)}${l}</a>`).join('')}</nav>
+  <nav class="dock">${nav.map(([k, l, i]) => `<a href="#${k}" class="${k === p ? 'on' : ''}" onclick="App.go('${k}');return false">${ico(i)}${l}</a>`).join('')}</nav><div class="dockHint">›</div>
   ${p !== 'vender' && puede('vender') ? `<button class="fab" title="Nueva venta" onclick="App.go('vender')">+</button>` : ''}`;
+  { const d = $('.dock'), h = $('.dockHint'); if (d) { const act = d.querySelector('.on'); d.scrollLeft = window._dockX || 0; if (act && (act.offsetLeft < d.scrollLeft || act.offsetLeft + act.offsetWidth > d.scrollLeft + d.clientWidth)) d.scrollLeft = act.offsetLeft - 20; const upd = () => { window._dockX = d.scrollLeft; const fin = d.scrollLeft + d.clientWidth >= d.scrollWidth - 4; d.classList.toggle('fin', fin); h?.classList.toggle('off', fin); }; d.onscroll = upd; upd(); } }
   if (p === 'clientes' && window._qc) { const i = document.querySelector('#qc'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
   if (p === 'vender' && window._q) { const i = document.querySelector('#view input'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
 }

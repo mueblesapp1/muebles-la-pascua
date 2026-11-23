@@ -189,3 +189,14 @@ select.in option{background:#0C1322}
   .posC.open .cbody{padding:16px 18px;animation:cup .28s ease-out}
   @keyframes cup{from{transform:translateY(30px);opacity:0}}
 }
+
+/* v32: barra inferior deslizable con pista visual */
+@media (max-width:900px){
+  .dock{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x;scroll-snap-type:x proximity;justify-content:flex-start;padding-right:30px;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 46px),transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 46px),transparent 100%)}
+  .dock.fin{-webkit-mask-image:none;mask-image:none}
+  .dock a{flex:0 0 auto;min-width:66px;scroll-snap-align:start;font-size:10px}
+  .dockHint{position:fixed;right:20px;bottom:38px;z-index:46;color:var(--amber2);font-size:20px;font-weight:700;pointer-events:none;animation:nudge 1.4s ease-in-out infinite}
+  .dockHint.off{display:none}
+  @keyframes nudge{50%{transform:translateX(4px)}}
+}
+@media (min-width:901px){.dockHint{display:none}}
