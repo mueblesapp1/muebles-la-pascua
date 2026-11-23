@@ -185,6 +185,8 @@ select.in option{background:#0C1322}
   .posC{position:fixed !important;top:auto !important;left:12px;right:12px;bottom:86px;z-index:44;padding:0;max-height:72vh;overflow:auto;background:rgba(14,22,40,.96);backdrop-filter:blur(20px);box-shadow:0 -10px 30px rgba(0,0,0,.45)}
   .cbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;font-size:15px;cursor:pointer;position:sticky;top:0;background:linear-gradient(135deg,var(--amber),#F08A0C);color:#1a1205;font-weight:600;border-radius:inherit}
   .posC.open .cbar{border-radius:0}
+  .posC.open{inset:0;left:0;right:0;bottom:0;top:0 !important;max-height:none;height:100dvh;z-index:80;border-radius:0;border:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);background:rgba(11,18,34,.99)}
+  .posC.open .cbar{padding-top:16px}
   .posC:not(.open) .cbody{display:none}
   .posC.open .cbody{padding:16px 18px;animation:cup .28s ease-out}
   @keyframes cup{from{transform:translateY(30px);opacity:0}}
