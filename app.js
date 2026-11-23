@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=33';
+import { store, today, daysAgo } from './store.js?v=34';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -563,9 +563,6 @@ const App = window.App = {
     const tipoTx = { cashea: 'Cashea', credito: 'Crédito' }[v.tipo] || 'Contado';
     const pagosTx = (v.pagos || []).map(x => `${x.metodo}: ${x.moneda === 'Bs' ? 'Bs ' + (+x.monto).toFixed(2) : $2(x.monto)}`).join('\n');
     const garTx = (v.items || []).map(i => { const p = db().productos.find(p => p.id === (i.productoId || i.producto_id)); return p?.garantia_meses ? `• ${i.nombre}: ${p.garantia_meses} meses` : ''; }).filter(Boolean).join('\n');
-    const txtCli = `*${tk.nombre}*\nNota de venta #${v.numero}\n${cli ? 'Cliente: ' + cli.nombre + '\n' : ''}\n${(v.items || []).map(i => `${i.cant} x ${i.nombre}: ${$2(i.precio * i.cant)}`).join('\n')}\n\n*Total: ${$2(v.total)}* (Bs ${(v.total * T).toFixed(2)})${v.tipo === 'cashea' ? `\nInicial pagada: ${$2(v.inicial)}\nResto (${$2(v.financiado)}) en cuotas con Cashea` : v.tipo === 'credito' ? `\nInicial: ${$2(v.inicial)}\nSaldo a crédito: ${$2(v.saldo)}` : ''}${pagosTx ? '\n\nPagado con:\n' + pagosTx : ''}${garTx ? '\n\n🛡️ Garantía:\n' + garTx : ''}\n\n${tk.pie || '¡Gracias por su compra!'}`;
-    const hoy = db().ventas.filter(x => x.fecha === today() && !x.anulada), sH = hoy.reduce((a, x) => a + +x.total, 0), cH = hoy.reduce((a, x) => a + +x.inicial, 0);
-    const txtDue = `🔔 *Nueva venta #${v.numero}* · ${tipoTx}\n${v.vendedor ? 'Vendedor: ' + v.vendedor + '\n' : ''}Cliente: ${cli?.nombre || 'Mostrador'}${cli?.telefono ? ' · ' + cli.telefono : ''}\n\n${(v.items || []).map(i => `• ${i.cant} x ${i.nombre}: ${$2(i.precio * i.cant)}`).join('\n')}\n\n*Total: ${$2(v.total)}*\nCobrado hoy: ${$2(v.inicial)}${pagosTx ? '\n' + pagosTx : ''}${v.tipo === 'cashea' ? `\nCashea financia ${$2(v.financiado)} · comisión ${$2(v.comision)} · te deposita ${$2(v.netoCashea)}` : v.tipo === 'credito' ? `\nQueda por cobrar: ${$2(v.saldo)}` : ''}\n\n📊 *Hoy van ${hoy.length} ventas por ${$2(sH)}*\nCobrado en tienda hoy: ${$2(cH)}`;
     const nCli = waNum(cli?.telefono), nDue = waNum(tk.dueno), mov = esMovil();
     const url = (n, t) => mov ? `whatsapp://send?phone=${n}${t ? '&text=' + encodeURIComponent(t) : ''}` : `https://wa.me/${n}${t ? '?text=' + encodeURIComponent(t) : ''}`;
     sheet(`<div style="text-align:center;padding-top:20px"><div style="font-size:64px;animation:rise .5s">✅</div><h2>Venta #${v.numero} registrada</h2><div class="sub">${v.tipo === 'cashea' ? 'Cashea · ' + (v.inicial > 0 ? 'inicial cobrada' : '100% financiado') : v.tipo === 'credito' ? `Crédito · saldo ${fmt(v.saldo, 'USD')} en cuentas por cobrar` : 'Contado'}</div></div>
@@ -584,7 +581,7 @@ const App = window.App = {
           bt.classList.remove('pri'); bt.classList.add('gh'); bt.textContent = '✓ ' + lbl; if (sig) { const s2 = document.querySelector(sig); if (s2 && !s2.disabled) { s2.classList.remove('gh'); s2.classList.add('pri'); } }
           toast('Ticket copiado. En WhatsApp: mantén presionado y Pegar'); if (mov) location.href = url(n, txt); else window.open(url(n, txt), '_blank'); }; };
       prep('#waCli', nCli, '', '1️⃣ Enviar ticket al cliente', 'Cliente sin teléfono', '#waDue');
-      prep('#waDue', nDue, txtDue, '2️⃣ Enviar ticket al dueño', 'Falta WhatsApp del dueño (Ajustes → Ticket)');
+      prep('#waDue', nDue, '', '2️⃣ Enviar ticket al dueño', 'Falta WhatsApp del dueño (Ajustes → Ticket)');
       if (!nCli && nDue) { const d = document.querySelector('#waDue'); d.classList.remove('gh'); d.classList.add('pri'); }
     });
   },
@@ -729,7 +726,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=33'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=34'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
