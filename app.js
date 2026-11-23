@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=53';
+import { store, today, daysAgo } from './store.js?v=54';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -130,10 +130,19 @@ V.vender = () => {
   <button class="btn pri block" ${cart.length ? '' : 'disabled style="opacity:.4"'} onclick="App.checkout()">Cobrar →</button></div></div></div>`;
 };
 
+const IF = window.IF = { q: '', cat: '', est: '' };
 V.inventario = () => {
-  const cats = [...new Set(db().productos.map(p => p.categoria))];
+  const todas = [...new Set(db().productos.map(p => p.categoria))];
+  const nq = s => (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const pal = nq(IF.q).split(/\s+/).filter(Boolean);
+  const ok = p => (!IF.cat || p.categoria === IF.cat) && (!IF.est || (!p.varios && (IF.est === 'reponer' ? p.stock <= p.min : IF.est === 'sin' ? p.stock <= 0 : p.stock > 0))) && pal.every(w => nq(p.nombre + ' ' + p.categoria).includes(w));
+  const lista = db().productos.filter(ok), cats = todas.filter(c => lista.some(p => p.categoria === c));
+  const filtrando = IF.q || IF.cat || IF.est;
   return `${esJefe() ? '<div style="margin-bottom:16px"><button class="btn pri" onclick="App.prodForm()">+ Nuevo producto</button></div>' : ''}
-  ${cats.map(c => `<h3 style="color:var(--mut);font-size:13px;letter-spacing:1.2px;text-transform:uppercase;margin:18px 0 10px">${esc(c)}</h3><div class="tiles">${db().productos.filter(p => p.categoria === c).map((p, i) => { if (p.varios) return `<div class="tile" style="animation-delay:${i * 25}ms"><div class="ic">${p.icono}</div><b>${esc(p.nombre)}</b><small>Precio libre al facturar · no maneja existencia</small><div class="row"><span class="pr">$ —</span><span class="tag t-am">Varios</span></div></div>`; const pct = Math.min(100, p.stock / Math.max(p.min * 3, 1) * 100); const mg = p.precio ? (p.precio - p.costo) / p.precio * 100 : 0; return `<div class="tile" style="animation-delay:${i * 25}ms" onclick="${esJefe() ? `App.prodForm('${p.id}')` : ''}"><div style="display:flex;justify-content:space-between"><div class="ic">${p.icono}</div>${p.stock <= p.min ? '<span class="tag t-bad" style="height:fit-content">Reponer</span>' : ''}</div><b>${esc(p.nombre)}</b><small>Costo ${fmt(p.costo)} · margen ${mg.toFixed(0)}% · garantía ${p.garantiaMeses || 0}m</small><div class="row"><span class="pr">${fmt(p.precio)}</span><b>${p.stock} <small>uds</small></b></div><div class="bar"><i style="width:${pct}%;${p.stock <= p.min ? 'background:var(--bad)' : ''}"></i></div></div>`; }).join('')}</div>`).join('') || '<div class="empty">Aún no hay productos.</div>'}`;
+  <input class="in" id="iq" placeholder="🔎 Buscar producto (ej. omega 140)" value="${esc(IF.q)}" autocomplete="off" oninput="IF.q=this.value;App.go('inventario',true);setTimeout(()=>{const i=document.querySelector('#iq');i.focus();i.setSelectionRange(i.value.length,i.value.length)})" style="margin-bottom:10px">
+  <div class="row2" style="margin-bottom:8px"><select class="in" onchange="IF.cat=this.value;App.go('inventario',true)"><option value="">Todas las categorías</option>${todas.map(c => `<option ${c === IF.cat ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select><select class="in" onchange="IF.est=this.value;App.go('inventario',true)">${[['', 'Todas las existencias'], ['con', 'Con existencia'], ['reponer', 'Por reponer'], ['sin', 'Sin existencia']].map(([v, l]) => `<option value="${v}" ${v === IF.est ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;color:var(--mut);font-size:13px;margin-bottom:4px"><span>${lista.length} de ${db().productos.length} productos · ${lista.filter(p => !p.varios).reduce((a, p) => a + (+p.stock || 0), 0)} uds</span>${filtrando ? `<button class="pill" onclick="IF.q='';IF.cat='';IF.est='';App.go('inventario',true)">✕ Limpiar</button>` : ''}</div>
+  ${cats.map(c => `<h3 style="color:var(--mut);font-size:13px;letter-spacing:1.2px;text-transform:uppercase;margin:18px 0 10px">${esc(c)}</h3><div class="tiles">${lista.filter(p => p.categoria === c).map((p, i) => { if (p.varios) return `<div class="tile" style="animation-delay:${i * 25}ms"><div class="ic">${p.icono}</div><b>${esc(p.nombre)}</b><small>Precio libre al facturar · no maneja existencia</small><div class="row"><span class="pr">$ —</span><span class="tag t-am">Varios</span></div></div>`; const pct = Math.min(100, p.stock / Math.max(p.min * 3, 1) * 100); const mg = p.precio ? (p.precio - p.costo) / p.precio * 100 : 0; return `<div class="tile" style="animation-delay:${i * 25}ms" onclick="${esJefe() ? `App.prodForm('${p.id}')` : ''}"><div style="display:flex;justify-content:space-between"><div class="ic">${p.icono}</div>${p.stock <= p.min ? '<span class="tag t-bad" style="height:fit-content">Reponer</span>' : ''}</div><b>${esc(p.nombre)}</b><small>Costo ${fmt(p.costo)} · margen ${mg.toFixed(0)}% · garantía ${p.garantiaMeses || 0}m</small><div class="row"><span class="pr">${fmt(p.precio)}</span><b>${p.stock} <small>uds</small></b></div><div class="bar"><i style="width:${pct}%;${p.stock <= p.min ? 'background:var(--bad)' : ''}"></i></div></div>`; }).join('')}</div>`).join('') || `<div class="empty">${filtrando ? 'Ningún producto coincide con el filtro.' : 'Aún no hay productos.'}</div>`}`;
 };
 
 V._cashea = () => {
@@ -737,7 +746,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=53'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=54'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
