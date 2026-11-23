@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=36';
+import { store, today, daysAgo } from './store.js?v=37';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -297,7 +297,7 @@ V.despacho = () => {
   ${lst.map(v => { const c = cli(v.clienteId), n = v.items.filter(i => i.despachado).length; return `<div class="card c6"><h3><span>#${v.numero} · ${esc(c?.nombre || 'Mostrador')}</span><span class="tag ${n === v.items.length ? 't-ok' : n ? 't-am' : 't-bad'}">${n}/${v.items.length}</span></h3>
    <small style="color:var(--mut)">${fdate(v.fecha)}${c?.telefono ? ' · ' + esc(c.telefono) : ''}${c?.direccion ? '<br>📍 ' + esc(c.direccion) : ''}</small>
    <div style="margin-top:8px">${v.items.map(i => `<label class="dsp ${i.despachado ? 'ok' : ''}"><input type="checkbox" ${i.despachado || DS.sel[i.id] ? 'checked' : ''} ${i.despachado ? 'disabled' : ''} onchange="DS.sel['${i.id}']=this.checked;App.go('despacho')"><span><b>${i.cant} × ${esc(i.nombre)}</b>${i.despachado ? `<small>Despachado ${i.despachado_en ? new Date(i.despachado_en).toLocaleString('es-VE', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''}${i.despachado_por ? ' · ' + esc(i.despachado_por) : ''}</small>` : ''}</span></label>`).join('')}</div>
-   <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap" class="dspb">${(() => { const pi = v.items.filter(i => !i.despachado), ns = pi.filter(i => DS.sel[i.id]).length; return pi.length ? `<button class="btn pri" ${ns ? '' : 'disabled style="opacity:.45"'} onclick="App.despacharSel('${v.id}')">🚚 Despachado${ns ? ' (' + ns + ')' : ''}</button>${pi.length > 1 ? `<button class="btn gh" onclick="App.despacharTodo('${v.id}')">✓ Despachar todo</button>` : ''}` : ''; })()}<button class="btn gh" onclick="App.verVenta('${v.id}')">Ver venta</button></div></div>`; }).join('') || `<div class="card c12"><div class="empty">${q ? 'Nada coincide' : DS.tab === 'pend' ? 'Nada por despachar en este período 🎉' : 'No hay ventas despachadas en este período'}</div></div>`}</div>`;
+   <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap" class="dspb">${(() => { const pi = v.items.filter(i => !i.despachado), ns = pi.filter(i => DS.sel[i.id]).length; return pi.length ? `<button class="btn pri" ${ns ? '' : 'disabled style="opacity:.45"'} onclick="App.despacharSel('${v.id}')">🚚 Despachado${ns ? ' (' + ns + ')' : ''}</button>${pi.length > 1 ? `<button class="btn gh" onclick="App.despacharTodo('${v.id}')">✓ Despachar todo</button>` : ''}` : ''; })()}<button class="btn gh" onclick="App.verVenta('${v.id}',1)">Ver venta</button></div></div>`; }).join('') || `<div class="card c12"><div class="empty">${q ? 'Nada coincide' : DS.tab === 'pend' ? 'Nada por despachar en este período 🎉' : 'No hay ventas despachadas en este período'}</div></div>`}</div>`;
 };
 
 // ---------- reportes ----------
@@ -424,7 +424,7 @@ const App = window.App = {
     <img id="tkImg" class="tkprev" alt="Comprobante"><button class="btn pri block" id="tkSh" disabled>Preparando comprobante…</button>
     <a class="btn gh block" style="margin-top:10px" target="_blank" href="https://wa.me/${tel}?text=${encodeURIComponent(txt)}">Enviar como texto por WhatsApp</a>
     <button class="btn gh block" style="margin-top:10px" onclick="document.querySelector('.ov').remove()">Listo</button>`);
-    ticketBlob({ ...v, abono: monto, pagos }).then(b => { const im = document.querySelector('#tkImg'), bt = document.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); bt.disabled = false; bt.textContent = '🧾 Enviar comprobante (imagen)'; bt.onclick = () => shareTicket(b, 'abono-' + v.numero); });
+    ticketBlob({ ...v, abono: monto, pagos }).then(b => { const im = document.querySelector('#tkImg'), bt = document.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); if (!bt) return; bt.disabled = false; bt.textContent = '🧾 Enviar comprobante (imagen)'; bt.onclick = () => shareTicket(b, 'abono-' + v.numero); });
   },
   historial(id) {
     const v = db().ventas.find(x => x.id === id), ab = db().abonos.filter(x => x.ventaId === id);
@@ -433,7 +433,7 @@ const App = window.App = {
     <button class="btn gh block" style="margin-top:12px" onclick="document.querySelector('.ov').remove()">Cerrar</button>`);
   },
   async delAbono(id) { if (!confirm('¿Borrar este abono? El saldo vuelve a subir.')) return; try { await store.delAbono(id); closeSheet(); render(); toast('Abono borrado'); } catch (e) { toast('Error: ' + e.message); } },
-  verVenta(id) {
+  verVenta(id, solo) {
     const v = db().ventas.find(x => x.id === id), c = db().clientes.find(x => x.id === v.clienteId), T = db().tasa.valor, tk = TK();
     const txtCli = `*${tk.nombre}*\nNota de venta #${v.numero} · ${fdate(v.fecha)}\n${(v.items || []).map(i => `${i.cant} x ${i.nombre}: $${(+i.precio).toFixed(2)}`).join('\n')}\nTotal: $${v.total.toFixed(2)} (Bs ${(v.total * T).toFixed(2)})${v.tipo === 'cashea' ? `\nInicial pagada: $${v.inicial.toFixed(2)}\nResto en cuotas con Cashea` : v.tipo === 'credito' ? `\nInicial: $${v.inicial.toFixed(2)}\nAbonado: $${(v.abonado || 0).toFixed(2)}\nSaldo: $${v.saldo.toFixed(2)}` : ''}\n${tk.pie || ''}`;
     const txtAlm = `📦 *DESPACHO · Nota #${v.numero}*\nFecha: ${fdate(v.fecha)}\n\n${(v.items || []).map(i => `• ${i.cant} x ${i.nombre}`).join('\n')}\n\n*Cliente:* ${c?.nombre || 'Mostrador'}${c?.cedula ? '\nCédula: ' + c.cedula : ''}${c?.telefono ? '\nTeléfono: ' + c.telefono : ''}${c?.direccion ? '\nDirección: ' + c.direccion : ''}\n*Venta:* ${{ cashea: 'Cashea', credito: 'Crédito' }[v.tipo] || 'Contado'}${v.vendedor ? '\nVendedor: ' + v.vendedor : ''}`;
@@ -444,12 +444,12 @@ const App = window.App = {
      ${v.tipo !== 'contado' ? `<div><span>Inicial</span><span>${fmt(v.inicial)}</span></div>` : ''}${v.tipo === 'cashea' ? `<div><span>Financia Cashea</span><span>${fmt(v.financiado)}</span></div><div><span>Liquidación</span><span>${v.liquidado ? 'Recibida' : 'Pendiente'}</span></div>` : ''}${v.tipo === 'credito' ? `<div><span>Abonado</span><span class="up">${fmt(v.abonado)}</span></div><div><span>Saldo</span><b class="${v.saldo > 0.009 ? 'down' : 'up'}">${fmt(v.saldo)}</b></div>` : ''}
      ${(v.pagos || []).map(p => `<div><span style="color:var(--mut)">${esc(p.metodo)}</span><span>${p.moneda === 'Bs' ? 'Bs ' + (+p.monto).toFixed(2) : '$' + (+p.monto).toFixed(2)}</span></div>`).join('')}</div>
     <img id="tkImg" class="tkprev" alt="Ticket">
-    <button class="btn pri block" id="tkSh" disabled>Preparando ticket…</button>
-    <div class="row2" style="margin-top:10px"><a class="btn gh" target="_blank" href="https://wa.me/${waNum(c?.telefono)}?text=${encodeURIComponent(txtCli)}">💬 WhatsApp cliente</a><a class="btn gh" target="_blank" href="https://wa.me/${waNum(tk.almacen)}?text=${encodeURIComponent(txtAlm)}">📦 Enviar a almacén</a></div>
-    ${v.tipo === 'credito' && v.saldo > 0.009 ? `<div class="row2" style="margin-top:10px"><button class="btn gh" onclick="document.querySelector('.ov').remove();App.abonoForm('${v.id}')">Abonar</button><button class="btn gh" onclick="document.querySelector('.ov').remove();App.historial('${v.id}')">Historial de abonos</button></div>` : ''}
-    ${esJefe() ? `<button class="btn gh block del" style="margin-top:10px" onclick="App.anular('${v.id}')">Anular venta</button>` : ''}
+    ${solo ? '' : `<button class="btn pri block" id="tkSh" disabled>Preparando ticket…</button>
+    <div class="row2" style="margin-top:10px"><a class="btn gh" target="_blank" href="https://wa.me/${waNum(c?.telefono)}?text=${encodeURIComponent(txtCli)}">💬 WhatsApp cliente</a><a class="btn gh" target="_blank" href="https://wa.me/${waNum(tk.almacen)}?text=${encodeURIComponent(txtAlm)}">📦 Enviar a almacén</a></div>`}
+    ${!solo && v.tipo === 'credito' && v.saldo > 0.009 ? `<div class="row2" style="margin-top:10px"><button class="btn gh" onclick="document.querySelector('.ov').remove();App.abonoForm('${v.id}')">Abonar</button><button class="btn gh" onclick="document.querySelector('.ov').remove();App.historial('${v.id}')">Historial de abonos</button></div>` : ''}
+    ${!solo && esJefe() ? `<button class="btn gh block del" style="margin-top:10px" onclick="App.anular('${v.id}')">Anular venta</button>` : ''}
     <button class="btn gh block" style="margin-top:10px" onclick="document.querySelector('.ov').remove()">Cerrar</button>`);
-    ticketBlob(v).then(b => { const im = o.querySelector('#tkImg'), bt = o.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); bt.disabled = false; bt.textContent = '🧾 Enviar ticket (imagen)'; bt.onclick = () => shareTicket(b, v.numero); });
+    ticketBlob(v).then(b => { const im = o.querySelector('#tkImg'), bt = o.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); if (!bt) return; bt.disabled = false; bt.textContent = '🧾 Enviar ticket (imagen)'; bt.onclick = () => shareTicket(b, v.numero); });
   },
   async anular(id) {
     const v = db().ventas.find(x => x.id === id), m = prompt(`¿Anular la venta #${v.numero}? Los productos vuelven al inventario${v.tipo === 'credito' ? ' y se borran sus abonos' : ''}.\nEscribe el motivo:`);
@@ -728,7 +728,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=36'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=37'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
