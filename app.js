@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=49';
+import { store, today, daysAgo } from './store.js?v=50';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -182,7 +182,7 @@ V.ajustes = () => `<div class="grid">
   ${esJefe() ? `<div class="card c6"><h3>Ticket de venta</h3>${(t => `<div class="fld"><label>Nombre del negocio</label><input class="in" id="tkN" value="${esc(t.nombre)}"></div><div class="row2"><div class="fld"><label>RIF</label><input class="in" id="tkR" placeholder="J-" value="${esc(t.rif)}"></div><div class="fld"><label>Teléfono</label><input class="in" id="tkT" value="${esc(t.telefono)}"></div></div><div class="fld"><label>Dirección</label><input class="in" id="tkD" value="${esc(t.direccion)}"></div><div class="fld"><label>Instagram</label><input class="in" id="tkI" placeholder="@" value="${esc(t.instagram)}"></div><div class="fld"><label>WhatsApp del dueño (recibe cada venta)</label><input class="in" id="tkW" placeholder="0414-0000000" value="${esc(t.dueno || '')}"></div><div class="fld"><label>WhatsApp del almacén</label><input class="in" id="tkA" placeholder="0414-0000000" value="${esc(t.almacen || '')}"></div><div class="fld"><label>Mensaje al pie</label><input class="in" id="tkP" value="${esc(t.pie)}"></div><div class="tkchk">${[['logo', 'Logo'], ['bs', 'Monto en Bs'], ['cliente', 'Datos del cliente'], ['pagos', 'Formas de pago'], ['garantia', 'Garantía'], ['vendedor', 'Vendedor']].map(([k, l]) => `<label><input type="checkbox" id="tk_${k}" ${t[k] ? 'checked' : ''}> ${l}</label>`).join('')}</div><div class="row2"><button class="btn gh" onclick="App.tkPrev()">Vista previa</button><button class="btn pri" onclick="App.tkSave()">Guardar</button></div>`)(TK())}</div>` : ''}
   ${esJefe() ? `<div class="card c6"><h3>Categorías</h3><div class="chips">${CATS().map((c, k) => `<span class="chip">${esc(c)}<button onclick="App.catDel(${k})" title="Quitar">×</button></span>`).join('')}</div><div class="row2" style="margin-top:12px"><input class="in" id="catIn" placeholder="Nueva categoría"><button class="btn pri" onclick="App.catAdd()">+ Agregar</button></div></div>` : ''}
   <div class="card c6"><h3>Respaldo</h3><p style="color:var(--mut);margin-bottom:14px">Descarga toda la base de datos en un Excel, una hoja por tabla.</p><button class="btn pri" onclick="App.respaldar()">⬇ Respaldar ahora</button></div>
-  ${rol() === 'dueno' ? `<div class="card c6"><h3>Usuarios <button class="pill" onclick="App.userForm()">+ Nuevo usuario</button></h3>${db().perfiles.map(u => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:8px"><span>${esc(u.nombre)}<br><small style="color:var(--mut)">${esc(u.email || '')}</small></span>${u.id === db().usuario.id ? '<span class="tag t-vi">Dueño (tú)</span>' : `<span style="display:flex;gap:6px;align-items:center"><span class="tag ${u.activo ? 't-in' : 't-bad'}">${u.activo ? u.rol : 'Bloqueado'}</span><button class="pill" onclick="App.userForm('${u.id}')">Editar</button></span>`}</div>`).join('')}<p style="color:var(--mut);font-size:12px;margin-top:10px">Solo tú creas usuarios y eliges a qué módulos entra cada uno.</p>
+  ${rol() === 'dueno' ? `<div class="card c6"><h3>Usuarios <button class="pill" onclick="App.userForm()">+ Nuevo usuario</button></h3>${db().perfiles.map(u => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:8px"><span>${esc(u.nombre)}<br><small style="color:var(--mut)">${esc(u.email || '')}</small></span><span style="display:flex;gap:6px;align-items:center">${u.rol === 'dueno' ? `<span class="tag t-vi">Dueño${u.id === db().usuario.id ? ' (tú)' : ''}</span>` : `<span class="tag ${u.activo ? 't-in' : 't-bad'}">${u.activo ? u.rol : 'Bloqueado'}</span>`}<button class="pill" onclick="App.userForm('${u.id}')">Editar</button></span></div>`).join('')}<p style="color:var(--mut);font-size:12px;margin-top:10px">Solo tú creas usuarios y eliges a qué módulos entra cada uno.</p>
 </div>
   <div class="card c6"><h3>Borrar datos</h3><p style="color:var(--mut);margin-bottom:12px">Antes de borrar, haz un respaldo. Esto no se puede deshacer.</p>
   <button class="btn gh block" onclick="App.borrarDemo()">🧹 Borrar datos de demostración</button>
@@ -735,34 +735,37 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=49'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=50'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
   },
   userForm(id) {
-    const u = id ? db().perfiles.find(x => x.id === id) : { rol: 'vendedor', activo: true }, mods = u.modulos || modsDef(u.rol);
+    const u = id ? db().perfiles.find(x => x.id === id) : { rol: 'vendedor', activo: true }, mods = u.modulos || modsDef(u.rol), du = u.rol === 'dueno';
     const o = sheet(`<h2>${id ? 'Editar usuario' : 'Nuevo usuario'}</h2><div class="sub">${id ? esc(u.email || '') : 'Entrará con este correo y contraseña'}</div>
     <div class="fld"><label>Nombre</label><input class="in" id="uN" value="${esc(u.nombre || '')}"></div>
-    ${id ? '' : '<div class="fld"><label>Correo</label><input class="in" id="uE" type="email" autocomplete="off" placeholder="empleado@gmail.com"></div>'}
+    <div class="fld"><label>Correo</label><input class="in" id="uE" type="email" autocomplete="off" placeholder="empleado@gmail.com" value="${esc(u.email || '')}"></div>
     <div class="fld"><label>${id ? 'Nueva contraseña (déjala vacía para no cambiarla)' : 'Contraseña (mínimo 6)'}</label><input class="in" id="uP" type="text" autocomplete="new-password"></div>
-    <div class="fld"><label>Perfil</label><div class="seg" id="uR">${[['vendedor', 'Vendedor'], ['cajero', 'Cajero'], ['almacen', 'Almacén'], ['admin', 'Administrador']].map(([k, l]) => `<button data-v="${k}" class="${u.rol === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
-    <div class="fld"><label>Módulos a los que puede entrar</label><div class="tkchk" id="uM">${MODS.map(([k, l]) => `<label><input type="checkbox" value="${k}" ${mods.includes(k) ? 'checked' : ''}> ${l}</label>`).join('')}</div><small style="color:var(--mut)">Ajustes siempre aparece para cerrar sesión. Los permisos de borrar, anular y configurar son solo de Administrador.</small></div>
-    ${id ? `<label style="display:flex;gap:8px;align-items:center;margin-bottom:14px"><input type="checkbox" id="uA" ${u.activo ? 'checked' : ''}> Usuario activo (desmárcalo para bloquear la entrada)</label>` : ''}
-    <button class="btn pri block" id="uOk">${id ? 'Guardar cambios' : 'Crear usuario'}</button>`);
+    ${du ? '<p style="color:var(--mut);font-size:13px;margin-bottom:14px">Usuario dueño: entra a todo y no se puede borrar ni bloquear.</p>' : `<div class="fld"><label>Perfil</label><div class="seg" id="uR">${[['vendedor', 'Vendedor'], ['cajero', 'Cajero'], ['almacen', 'Almacén'], ['admin', 'Administrador']].map(([k, l]) => `<button data-v="${k}" class="${u.rol === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+    <div class="fld"><label>Módulos a los que puede entrar</label><div class="tkchk" id="uM">${MODS.map(([k, l]) => `<label><input type="checkbox" value="${k}" ${mods.includes(k) ? 'checked' : ''}> ${l}</label>`).join('')}</div><small style="color:var(--mut)">Ajustes siempre aparece para cerrar sesión. Los permisos de borrar, anular y configurar son solo de Administrador.</small></div>`}
+    ${id && !du ? `<label style="display:flex;gap:8px;align-items:center;margin-bottom:14px"><input type="checkbox" id="uA" ${u.activo ? 'checked' : ''}> Usuario activo (desmárcalo para bloquear la entrada)</label>` : ''}
+    <button class="btn pri block" id="uOk">${id ? 'Guardar cambios' : 'Crear usuario'}</button>
+    ${id && !du ? `<button class="btn gh block" style="margin-top:10px;color:#ff6b6b" onclick="App.delUser('${id}')">🗑 Borrar usuario</button>` : ''}`);
     let r = u.rol;
     o.querySelectorAll('#uR button').forEach(b => b.onclick = () => { o.querySelectorAll('#uR button').forEach(x => x.classList.remove('on')); b.classList.add('on'); r = b.dataset.v; const d = modsDef(r); o.querySelectorAll('#uM input').forEach(c => c.checked = d.includes(c.value)); });
     o.querySelector('#uOk').onclick = async e => {
       const n = o.querySelector('#uN').value.trim(), p = o.querySelector('#uP').value, m = [...o.querySelectorAll('#uM input:checked')].map(c => c.value);
-      if (!n) return toast('Falta el nombre'); if (!m.length) return toast('Elige al menos un módulo'); if ((!id || p) && p.length < 6) return toast('La contraseña necesita al menos 6 caracteres');
+      const em = o.querySelector('#uE').value.trim().toLowerCase();
+      if (!n) return toast('Falta el nombre'); if (!/^\S+@\S+\.\S+$/.test(em)) return toast('Correo inválido'); if (!du && !m.length) return toast('Elige al menos un módulo'); if ((!id || p) && p.length < 6) return toast('La contraseña necesita al menos 6 caracteres');
       e.target.disabled = true; e.target.textContent = 'Guardando…';
       try {
-        if (id) { await store.setPerfil(id, { nombre: n, rol: r, modulos: m, activo: o.querySelector('#uA').checked }); if (p) await store.cambiarClave(id, p); }
-        else { const em = o.querySelector('#uE').value.trim(); if (!/^\S+@\S+\.\S+$/.test(em)) throw new Error('correo inválido'); await store.crearUsuario({ email: em, pass: p, nombre: n, rol: r, modulos: m }); }
+        if (id) { if (em !== (u.email || '').toLowerCase()) await store.cambiarCorreo(id, em); if (p) await store.cambiarClave(id, p); await store.setPerfil(id, du ? { nombre: n } : { nombre: n, rol: r, modulos: m, activo: o.querySelector('#uA').checked }); }
+        else await store.crearUsuario({ email: em, pass: p, nombre: n, rol: r, modulos: m });
         closeSheet(); render(); toast(id ? 'Usuario actualizado' : 'Usuario creado. Ya puede entrar con su correo y contraseña');
       } catch (err) { toast('Error: ' + err.message); e.target.disabled = false; e.target.textContent = id ? 'Guardar cambios' : 'Crear usuario'; }
     };
   },
+  async delUser(id) { const u = db().perfiles.find(x => x.id === id); if (!u || u.rol === 'dueno') return toast('El usuario dueño no se puede borrar'); if (!confirm(`¿Borrar el usuario ${u.nombre}? Ya no podrá entrar. Sus ventas y registros se quedan.`)) return; try { await store.borrarUsuario(id); closeSheet(); render(); toast('Usuario borrado'); } catch (e) { toast('Error: ' + e.message); } },
   async setRol(id, r) { await store.setPerfil(id, { rol: r }); toast('Rol actualizado'); },
   async toggleUser(id, a) { await store.setPerfil(id, { activo: a }); render(); },
   async limpiar(modo) {

@@ -71,6 +71,8 @@ export const store = {
   async setTicket(t) { ok(await sb.from('config').update({ ticket: t }).eq('id', 1)); db.config.ticket = t; },
   async setTasa(valor, fuente = 'Manual') { ok(await sb.from('config').update({ tasa: +valor, tasa_fecha: today(), tasa_fuente: fuente }).eq('id', 1)); db.tasa = { valor: +valor, fecha: today(), fuente }; },
   async crearUsuario(u) { ok(await sb.rpc('crear_usuario', { p_email: u.email, p_pass: u.pass, p_nombre: u.nombre, p_rol: u.rol, p_modulos: u.modulos })); await this.load(); },
+  async cambiarCorreo(id, email) { ok(await sb.rpc('cambiar_correo', { p_uid: id, p_email: email })); },
+  async borrarUsuario(id) { ok(await sb.rpc('borrar_usuario', { p_uid: id })); await this.load(); },
   async cambiarClave(id, pass) { ok(await sb.rpc('cambiar_clave', { p_uid: id, p_pass: pass })); },
   async setPerfil(id, ch) { ok(await sb.from('perfiles').update(ch).eq('id', id)); await this.load(); },
   async limpiar(modo) { ok(await sb.rpc('limpiar_datos', { p_modo: modo })); await this.load(); },
