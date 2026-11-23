@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=46';
+import { store, today, daysAgo } from './store.js?v=47';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -208,6 +208,9 @@ V.cashea = () => {
   const R = cxData(), lst = R.vs;
   const grupos = {}; lst.forEach(v => (grupos[v.clienteId] ||= []).push(v));
   const deuda = abiertas.reduce((s, v) => s + v.saldo, 0), mes = db().abonos.filter(x => x.fecha >= today().slice(0, 8) + '01');
+  const tarjetas = {Object.entries(grupos).sort((x, y) => y[1].reduce((s, v) => s + v.saldo, 0) - x[1].reduce((s, v) => s + v.saldo, 0)).map(([id, vs]) => { const c = cli(id) || { nombre: 'Sin cliente' }; return `<div class="card c6"><h3>${esc(c.nombre)} <span class="tag t-am">${fmt(vs.reduce((s, v) => s + v.saldo, 0))}</span></h3><small style="color:var(--mut)">${esc(c.cedula || '')} ${c.telefono ? '· ' + esc(c.telefono) : ''}</small>
+   ${vs.map(v => `<div class="cx"><div><b>#${v.numero}</b> <small>${fdate(v.fecha)}</small><br><small>${esc((v.items || []).map(i => i.nombre).join(', '))}</small><div class="cxb"><span>Total ${fmt(v.total)}</span><span>Inicial ${fmt(v.inicial)}</span><span>Abonado ${fmt(v.abonado)}</span></div></div><div style="text-align:right"><div class="cxs">${fmt(v.saldo)}</div>${v.saldo > 0.009 ? `<button class="btn pri" style="padding:8px 14px;margin-top:6px" onclick="App.abonoForm('${v.id}')">Abonar</button>` : '<span class="tag t-ok">Saldada</span>'}<br><button class="pill" style="margin-top:6px" onclick="App.historial('${v.id}')">Historial</button></div></div>`).join('')}</div>`; }).join('') || `<div class="card c12"><div class="empty">${q || CX.d || CX.h || CX.est !== 'saldo' ? 'Ninguna cuenta coincide con el filtro.' : 'Ningún cliente te debe 🎉'}</div></div>`;
+  if (CX.cid) return `<div class="grid"><div class="c12"><button class="btn gh" onclick="CX.cid='';App.go('clientes')">‹ Volver a Clientes</button></div>${tarjetas}</div>`;
   return `<div class="grid">${segm}
   <div class="card kpi hero c4"><h3>Clientes te deben</h3><div class="v">${fmt(deuda)}</div><div class="s">${abiertas.length} cuentas abiertas · ${fmt(deuda, 'VES')}</div></div>
   <div class="card kpi c4"><h3>Abonos este mes</h3><div class="v up">${fmt(mes.reduce((s, x) => s + x.monto, 0))}</div><div class="s">${mes.length} abonos registrados</div></div>
@@ -218,8 +221,7 @@ V.cashea = () => {
    <div class="fld"><label>Hasta</label><input class="in" type="date" value="${CX.h}" onchange="CX.h=this.value;App.go('cashea')"></div>
    <div class="fld" style="display:flex;gap:8px;align-items:flex-end"><button class="btn pri" onclick="App.cxPDF()">🖨 PDF</button><button class="btn gh" onclick="App.cxExcel()">Excel</button>${CX.d || CX.h || CX.est !== 'saldo' || CX.q || CX.cid ? `<button class="pill" onclick="Object.assign(CX,{est:'saldo',d:'',h:'',q:'',cid:''});App.go('cashea')">${CX.cid ? '✕ Ver todos los clientes' : 'Limpiar'}</button>` : ''}</div></div>
    <div class="cxb" style="font-size:13px;margin-top:6px"><span>${R.vs.length} cuentas</span><span>Total ${fmt(R.total)}</span><span>Inicial ${fmt(R.ini)}</span><span>Abonado ${fmt(R.abo)}</span><b style="color:var(--text)">Saldo ${fmt(R.saldo)}</b></div></div>
-  ${Object.entries(grupos).sort((x, y) => y[1].reduce((s, v) => s + v.saldo, 0) - x[1].reduce((s, v) => s + v.saldo, 0)).map(([id, vs]) => { const c = cli(id) || { nombre: 'Sin cliente' }; return `<div class="card c6"><h3>${esc(c.nombre)} <span class="tag t-am">${fmt(vs.reduce((s, v) => s + v.saldo, 0))}</span></h3><small style="color:var(--mut)">${esc(c.cedula || '')} ${c.telefono ? '· ' + esc(c.telefono) : ''}</small>
-   ${vs.map(v => `<div class="cx"><div><b>#${v.numero}</b> <small>${fdate(v.fecha)}</small><br><small>${esc((v.items || []).map(i => i.nombre).join(', '))}</small><div class="cxb"><span>Total ${fmt(v.total)}</span><span>Inicial ${fmt(v.inicial)}</span><span>Abonado ${fmt(v.abonado)}</span></div></div><div style="text-align:right"><div class="cxs">${fmt(v.saldo)}</div>${v.saldo > 0.009 ? `<button class="btn pri" style="padding:8px 14px;margin-top:6px" onclick="App.abonoForm('${v.id}')">Abonar</button>` : '<span class="tag t-ok">Saldada</span>'}<br><button class="pill" style="margin-top:6px" onclick="App.historial('${v.id}')">Historial</button></div></div>`).join('')}</div>`; }).join('') || `<div class="card c12"><div class="empty">${q || CX.d || CX.h || CX.est !== 'saldo' ? 'Ninguna cuenta coincide con el filtro.' : 'Ningún cliente te debe 🎉'}</div></div>`}</div>`;
+  ${tarjetas}</div>`;
 };
 
 // ---------- ventas ----------
@@ -387,7 +389,7 @@ async function shareTicket(blob, num) {
 
 const App = window.App = {
   page: 'tablero',
-  go(p, keep) { this.page = p; if (!keep) { window._q = ''; window._qc = ''; } location.hash = p; render(); },
+  go(p, keep) { if (p !== 'cashea') CX.cid = ''; this.page = p; if (!keep) { window._q = ''; window._qc = ''; } location.hash = p; render(); },
   setCur(c) { CUR = c; localStorage.setItem('mlp_cur', c); render(); },
   addCart(id) { const p = db().productos.find(p => p.id === id); if (p?.varios) return this.variosForm(p); if (!p || p.stock <= 0) return toast('Sin existencia'); const it = cart.find(i => i.productoId === id); if (it) { if (it.cant < p.stock) it.cant++; } else cart.push({ k: id, productoId: id, nombre: p.nombre, precio: +p.precio, p1: +p.precio, p2: +p.precio2 || 0, nivel: 1, cant: 1 }); render(); },
   nivel(id, n) { const it = cart.find(i => i.k === id); it.nivel = n; it.precio = n === 2 ? it.p2 : it.p1; render(); },
@@ -728,7 +730,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=46'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=47'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
