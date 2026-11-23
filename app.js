@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=30';
+import { store, today, daysAgo } from './store.js?v=31';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -179,7 +179,7 @@ V.ajustes = () => `<div class="grid">
   <div class="card c6"><h3>Tasa del día</h3><div class="kpi"><div class="v">${db().tasa.valor} <small style="font-size:14px;color:var(--mut)">Bs por $</small></div><div class="s">${esc(db().tasa.fuente)} · ${db().tasa.fecha ? fdate(db().tasa.fecha) : ''}</div></div>
   ${esJefe() ? `<div class="row2" style="margin-top:16px"><input class="in" id="tasaIn" type="number" step="0.01" placeholder="Nueva tasa"><button class="btn gh" onclick="App.setTasa()">Guardar manual</button></div><button class="btn gh block" style="margin-top:10px" onclick="App.bcv(true)">⟳ Traer tasa BCV</button>` : ''}</div>
   ${esJefe() ? `<div class="card c6"><h3>Cashea</h3><div class="fld"><label>Comisión sobre lo financiado (%)</label><input class="in" id="comIn" type="number" step="0.1" value="${db().config.comisionCashea}"></div><button class="btn gh" onclick="App.setCom()">Guardar</button></div>` : ''}
-  ${esJefe() ? `<div class="card c6"><h3>Ticket de venta</h3>${(t => `<div class="fld"><label>Nombre del negocio</label><input class="in" id="tkN" value="${esc(t.nombre)}"></div><div class="row2"><div class="fld"><label>RIF</label><input class="in" id="tkR" placeholder="J-" value="${esc(t.rif)}"></div><div class="fld"><label>Teléfono</label><input class="in" id="tkT" value="${esc(t.telefono)}"></div></div><div class="fld"><label>Dirección</label><input class="in" id="tkD" value="${esc(t.direccion)}"></div><div class="fld"><label>Instagram</label><input class="in" id="tkI" placeholder="@" value="${esc(t.instagram)}"></div><div class="fld"><label>WhatsApp del almacén</label><input class="in" id="tkA" placeholder="0414-0000000" value="${esc(t.almacen || '')}"></div><div class="fld"><label>Mensaje al pie</label><input class="in" id="tkP" value="${esc(t.pie)}"></div><div class="tkchk">${[['logo', 'Logo'], ['bs', 'Monto en Bs'], ['cliente', 'Datos del cliente'], ['pagos', 'Formas de pago'], ['garantia', 'Garantía'], ['vendedor', 'Vendedor']].map(([k, l]) => `<label><input type="checkbox" id="tk_${k}" ${t[k] ? 'checked' : ''}> ${l}</label>`).join('')}</div><div class="row2"><button class="btn gh" onclick="App.tkPrev()">Vista previa</button><button class="btn pri" onclick="App.tkSave()">Guardar</button></div>`)(TK())}</div>` : ''}
+  ${esJefe() ? `<div class="card c6"><h3>Ticket de venta</h3>${(t => `<div class="fld"><label>Nombre del negocio</label><input class="in" id="tkN" value="${esc(t.nombre)}"></div><div class="row2"><div class="fld"><label>RIF</label><input class="in" id="tkR" placeholder="J-" value="${esc(t.rif)}"></div><div class="fld"><label>Teléfono</label><input class="in" id="tkT" value="${esc(t.telefono)}"></div></div><div class="fld"><label>Dirección</label><input class="in" id="tkD" value="${esc(t.direccion)}"></div><div class="fld"><label>Instagram</label><input class="in" id="tkI" placeholder="@" value="${esc(t.instagram)}"></div><div class="fld"><label>WhatsApp del dueño (recibe cada venta)</label><input class="in" id="tkW" placeholder="0414-0000000" value="${esc(t.dueno || '')}"></div><div class="fld"><label>WhatsApp del almacén</label><input class="in" id="tkA" placeholder="0414-0000000" value="${esc(t.almacen || '')}"></div><div class="fld"><label>Mensaje al pie</label><input class="in" id="tkP" value="${esc(t.pie)}"></div><div class="tkchk">${[['logo', 'Logo'], ['bs', 'Monto en Bs'], ['cliente', 'Datos del cliente'], ['pagos', 'Formas de pago'], ['garantia', 'Garantía'], ['vendedor', 'Vendedor']].map(([k, l]) => `<label><input type="checkbox" id="tk_${k}" ${t[k] ? 'checked' : ''}> ${l}</label>`).join('')}</div><div class="row2"><button class="btn gh" onclick="App.tkPrev()">Vista previa</button><button class="btn pri" onclick="App.tkSave()">Guardar</button></div>`)(TK())}</div>` : ''}
   ${esJefe() ? `<div class="card c6"><h3>Categorías</h3><div class="chips">${CATS().map((c, k) => `<span class="chip">${esc(c)}<button onclick="App.catDel(${k})" title="Quitar">×</button></span>`).join('')}</div><div class="row2" style="margin-top:12px"><input class="in" id="catIn" placeholder="Nueva categoría"><button class="btn pri" onclick="App.catAdd()">+ Agregar</button></div></div>` : ''}
   <div class="card c6"><h3>Respaldo</h3><p style="color:var(--mut);margin-bottom:14px">Descarga toda la base de datos en un Excel, una hoja por tabla.</p><button class="btn pri" onclick="App.respaldar()">⬇ Respaldar ahora</button></div>
   ${rol() === 'dueno' ? `<div class="card c6"><h3>Usuarios <button class="pill" onclick="App.userForm()">+ Nuevo usuario</button></h3>${db().perfiles.map(u => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:8px"><span>${esc(u.nombre)}<br><small style="color:var(--mut)">${esc(u.email || '')}</small></span>${u.id === db().usuario.id ? '<span class="tag t-vi">Dueño (tú)</span>' : `<span style="display:flex;gap:6px;align-items:center"><span class="tag ${u.activo ? 't-in' : 't-bad'}">${u.activo ? u.rol : 'Bloqueado'}</span><button class="pill" onclick="App.userForm('${u.id}')">Editar</button></span>`}</div>`).join('')}<p style="color:var(--mut);font-size:12px;margin-top:10px">Solo tú creas usuarios y eliges a qué módulos entra cada uno.</p>
@@ -225,6 +225,7 @@ V.cashea = () => {
 // ---------- ventas ----------
 const VF = window.VF = { modo: 'hoy', d: today(), h: today(), tipo: '', q: '', vend: '' };
 const tipoTag = v => `<span class="tag ${v.tipo === 'cashea' ? 't-vi' : v.tipo === 'credito' ? 't-am' : 't-ok'}">${{ cashea: 'Cashea', credito: 'Crédito' }[v.tipo] || 'Contado'}</span>`;
+const esMovil = () => matchMedia('(max-width:900px)').matches || /iPhone|iPad|Android/i.test(navigator.userAgent);
 const waNum = t => t ? '58' + String(t).replace(/\D/g, '').replace(/^58/, '').replace(/^0/, '') : '';
 V.ventas = () => {
   const [d, h] = VF.modo === 'todas' ? ['0000', '9999'] : rango(VF), q = VF.q.trim().toLowerCase(), cli = id => db().clientes.find(c => c.id === id);
@@ -492,32 +493,32 @@ const App = window.App = {
     <div class="fld"><label>Cliente</label><input class="in" id="cBus" placeholder="🔎 Buscar por nombre, cédula o teléfono…" autocomplete="off"><input type="hidden" id="cCli"><div id="cRes" style="margin-top:8px"></div></div>
     <div class="fld"><label>Forma de venta</label><div class="seg" id="sTipo"><button data-v="contado" class="on">💵 Contado</button><button data-v="cashea">💳 Cashea</button><button data-v="credito">🤝 Crédito</button></div></div>
     <div class="fld" id="fCred" style="display:none"><label>Inicial que paga hoy (opcional)</label><div class="row2"><input class="in" id="iniCred" type="number" step="0.01" inputmode="decimal" placeholder="0.00"><select class="in" id="iniMon"><option>$</option><option>Bs</option></select></div></div>
-    <div class="fld" id="fPct" style="display:none"><label>Inicial según el nivel del cliente en Cashea</label><div class="seg" id="sPct">${[60, 50, 40].map(p => `<button data-v="${p}" class="${p === 60 ? 'on' : ''}">${p}%</button>`).join('')}<input class="in" id="pctOtro" type="number" placeholder="Otro %" style="flex:1;min-width:90px"></div></div>
+    <div class="fld" id="fPct" style="display:none"><label>Inicial según el nivel del cliente en Cashea</label><div class="seg" id="sPct">${[60, 50, 40, 20, 10, 0].map(p => `<button data-v="${p}" class="${p === 60 ? 'on' : ''}">${p}%</button>`).join('')}<input class="in" id="pctOtro" type="number" placeholder="Otro %" style="flex:1;min-width:90px"></div></div>
     <div class="fld"><label id="lMet">Método de pago</label><div id="pagos"></div><button class="pill" id="addPago" style="margin-top:8px">+ Otro método</button><div id="pagoMsg" style="margin-top:8px;font-size:13px"></div></div>
     <div class="sum" id="resumen"></div><button class="btn pri block" id="bOk">Confirmar venta</button>`);
     const calc = () => {
       const cr = st.tipo === 'credito', iv = +o.querySelector('#iniCred').value || 0, iniC = Math.min(tot, o.querySelector('#iniMon').value === 'Bs' ? iv / db().tasa.valor : iv);
       const pct = st.tipo === 'cashea' ? st.pct : 100, ini = cr ? iniC : tot * pct / 100, fin = tot - ini, com = st.tipo === 'cashea' ? fin * db().config.comisionCashea / 100 : 0;
       cobrar = ini; drawPagos(); o.querySelector('#fPct').style.display = st.tipo === 'cashea' ? '' : 'none'; o.querySelector('#fCred').style.display = cr ? '' : 'none';
-      o.querySelector('#lMet').parentElement.style.display = cr && ini <= 0 ? 'none' : '';
+      o.querySelector('#lMet').parentElement.style.display = ini <= 0.009 ? 'none' : '';
       o.querySelector('#lMet').textContent = st.tipo !== 'contado' ? 'Método con que paga la inicial' : 'Método de pago';
       o.querySelector('#resumen').innerHTML = `<div><span>Total</span><b>${fmt(tot, 'USD')}</b></div>` + (st.tipo === 'cashea' ? `<div><span>Inicial ${pct}% (cobras hoy)</span><b>${fmt(ini, 'USD')}</b></div><div><span>Financia Cashea</span><span>${fmt(fin, 'USD')}</span></div><div><span>Comisión ${db().config.comisionCashea}%</span><span class="down">−${fmt(com, 'USD')}</span></div><div><span>Cashea te deposita</span><span class="up">${fmt(fin - com, 'USD')}</span></div>` : cr ? `<div><span>Inicial (cobras hoy)</span><b>${fmt(ini, 'USD')}</b></div><div><span>Queda en cuentas por cobrar</span><span class="down">${fmt(fin, 'USD')} · ${fmt(fin, 'VES')}</span></div>` : '') + `<div class="tot"><span>Cobrar ahora</span><span>${fmt(ini, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares</span><b>${fmt(ini, 'VES')}</b></div>`;
     };
     const T = () => db().tasa.valor;
     const usdDe = x => x.moneda === 'Bs' ? (+x.monto || 0) / T() : (+x.monto || 0);
     const pagoMsg = () => { const pag = pagos.reduce((a, x) => a + usdDe(x), 0), f = cobrar - pag, m = o.querySelector('#pagoMsg');
-      m.innerHTML = pagos.length === 1 && !pagos[0].monto ? `<span style="color:var(--mut)">Se cobra todo con ${pagos[0].metodo}</span>` : Math.abs(f) < 0.01 ? '<span class="up">✓ Pago completo</span>' : f > 0 ? `<span class="down">Faltan ${fmt(f, 'USD')} · ${fmt(f, 'VES')}</span>` : `<span class="down">Sobran ${fmt(-f, 'USD')} (vuelto)</span>`; };
+      m.innerHTML = pagos.length === 1 ? `<span class="up">✓ Monto exacto con ${pagos[0].metodo}</span> <span style="color:var(--mut)">· para dividir el pago usa + Otro método</span>` : Math.abs(f) < 0.01 ? '<span class="up">✓ Pago completo</span>' : f > 0 ? `<span class="down">Faltan ${fmt(f, 'USD')} · ${fmt(f, 'VES')}</span>` : `<span class="down">Sobran ${fmt(-f, 'USD')} (vuelto)</span>`; };
     const autoFill = () => { const a = pagos.find(x => x.auto); if (!a) return; const resto = Math.max(0, cobrar - pagos.filter(x => x !== a).reduce((s, x) => s + usdDe(x), 0)); a.monto = (a.moneda === 'Bs' ? resto * T() : resto).toFixed(2); const el = o.querySelector(`#pagos input[data-i="${pagos.indexOf(a)}"]`); if (el) el.value = a.monto; };
     const drawPagos = () => {
-      if (pagos.length > 1) autoFill();
+      if (pagos.length > 1) autoFill(); else { pagos[0].auto = false; pagos[0].monto = (pagos[0].moneda === 'Bs' ? cobrar * T() : cobrar).toFixed(2); }
       const box = o.querySelector('#pagos');
-      box.innerHTML = pagos.map((x, i) => `<div style="display:flex;gap:6px;margin-bottom:6px"><select class="in" data-i="${i}" data-k="metodo" style="flex:1.4">${METS.map(m => `<option ${m === x.metodo ? 'selected' : ''}>${m}</option>`).join('')}</select><select class="in" data-i="${i}" data-k="moneda" style="width:70px"><option ${x.moneda === '$' ? 'selected' : ''}>$</option><option ${x.moneda === 'Bs' ? 'selected' : ''}>Bs</option></select><input class="in" data-i="${i}" data-k="monto" type="number" step="0.01" inputmode="decimal" placeholder="${pagos.length === 1 ? 'Todo' : 'Monto'}" value="${x.monto}" style="flex:1">${pagos.length > 1 ? `<button class="pill" data-del="${i}">✕</button>` : ''}</div>`).join('');
+      box.innerHTML = pagos.map((x, i) => `<div style="display:flex;gap:6px;margin-bottom:6px"><select class="in" data-i="${i}" data-k="metodo" style="flex:1.4">${METS.map(m => `<option ${m === x.metodo ? 'selected' : ''}>${m}</option>`).join('')}</select><select class="in" data-i="${i}" data-k="moneda" style="width:70px"><option ${x.moneda === '$' ? 'selected' : ''}>$</option><option ${x.moneda === 'Bs' ? 'selected' : ''}>Bs</option></select><input class="in" data-i="${i}" data-k="monto" type="number" step="0.01" inputmode="decimal" placeholder="Monto" value="${x.monto}" ${pagos.length === 1 ? 'readonly title="Monto exacto. Para dividir el pago usa + Otro método" style="flex:1;opacity:.75;font-weight:600"' : 'style="flex:1"'}>${pagos.length > 1 ? `<button class="pill" data-del="${i}">✕</button>` : ''}</div>`).join('');
       box.querySelectorAll('[data-k]').forEach(el => el.oninput = el.onchange = () => { const x = pagos[el.dataset.i]; x[el.dataset.k] = el.value; if (el.dataset.k === 'monto') { x.auto = false; if (!pagos.some(y => y.auto)) { const last = pagos.at(-1); if (last !== x) last.auto = true; } autoFill(); } if (el.dataset.k === 'metodo') { x.moneda = /\$|Zelle|Binance/.test(el.value) ? '$' : 'Bs'; drawPagos(); } else if (el.dataset.k === 'moneda') drawPagos(); else pagoMsg(); });
       box.querySelectorAll('[data-del]').forEach(el => el.onclick = () => { pagos.splice(+el.dataset.del, 1); if (pagos.length > 1 && !pagos.some(y => y.auto)) pagos.at(-1).auto = true; if (pagos.length === 1) pagos[0].auto = false; drawPagos(); });
       pagoMsg();
     };
     o.querySelector('#addPago').onclick = () => {
-      pagos.forEach(x => x.auto = false);
+      pagos.forEach(x => x.auto = false); if (pagos.length === 1) pagos[0].monto = '';
       const usados = pagos.map(x => x.metodo), m = METS.find(x => !usados.includes(x)) || 'Efectivo $';
       pagos.push({ metodo: m, moneda: /\$|Zelle|Binance/.test(m) ? '$' : 'Bs', monto: '', auto: true }); drawPagos();
       o.querySelector(`#pagos input[data-i="0"]`)?.focus();
@@ -544,6 +545,7 @@ const App = window.App = {
     calc();
     o.querySelector('#bOk').onclick = async e => {
       e.target.disabled = true; e.target.textContent = 'Guardando…';
+      const cSel = db().clientes.find(c => c.id === o.querySelector('#cCli').value), pre = !esMovil() && (waNum(cSel?.telefono) || waNum(TK().dueno)) ? window.open('', '_blank') : null;
       try {
         if (st.tipo === 'credito' && !o.querySelector('#cCli').value) throw new Error('la venta a crédito necesita un cliente');
         let ps = cobrar > 0 ? pagos.filter(x => +x.monto > 0) : [];
@@ -551,24 +553,42 @@ const App = window.App = {
         const pag = ps.reduce((a, x) => a + usdDe(x), 0);
         if (pag + 0.01 < cobrar) throw new Error(`faltan ${fmt(cobrar - pag, 'USD')} por cobrar`);
         const lista = ps.map(x => ({ metodo: x.metodo, moneda: x.moneda, monto: +(+x.monto).toFixed(2), usd: +usdDe(x).toFixed(2) }));
-        const v = await store.addVenta({ clienteId: o.querySelector('#cCli').value || null, items: cart, total: tot, tipo: st.tipo, inicialPct: st.tipo === 'cashea' ? st.pct : 100, inicial: st.tipo === 'credito' ? +cobrar.toFixed(2) : null, metodo: [...new Set(lista.map(x => x.metodo))].join(' + ') || 'Crédito', pagos: lista });
-        cart = []; closeSheet(); this.recibo(v); render();
-      } catch (err) { toast('Error: ' + err.message); e.target.disabled = false; e.target.textContent = 'Confirmar venta'; }
+        const v = await store.addVenta({ clienteId: o.querySelector('#cCli').value || null, items: cart, total: tot, tipo: st.tipo, inicialPct: st.tipo === 'cashea' ? st.pct : 100, inicial: st.tipo === 'credito' ? +cobrar.toFixed(2) : null, metodo: [...new Set(lista.map(x => x.metodo))].join(' + ') || (st.tipo === 'cashea' ? 'Cashea 100% financiado' : 'Crédito'), pagos: lista });
+        cart = []; closeSheet(); render(); this.recibo(v, pre);
+      } catch (err) { pre?.close(); toast('Error: ' + err.message); e.target.disabled = false; e.target.textContent = 'Confirmar venta'; }
     };
   },
-  recibo(v) {
-    const cli = db().clientes.find(c => c.id === v.clienteId);
-    const txt = `*Muebles La Pascua*\nNota de venta #${v.numero}\n${(v.items || []).map(i => `${i.cant} x ${i.nombre}: $${(+i.precio).toFixed(2)}`).join('\n')}\nTotal: $${(+v.total).toFixed(2)} (Bs ${(v.total * db().tasa.valor).toFixed(2)})${v.tipo === 'cashea' ? `\nInicial pagada: $${(+v.inicial).toFixed(2)}\nResto en cuotas con Cashea` : v.tipo === 'credito' ? `\nInicial: $${(+v.inicial).toFixed(2)}\nSaldo a crédito: $${(+v.saldo).toFixed(2)}` : ''}\n¡Gracias por su compra!`;
-    const tel = cli?.telefono ? '58' + cli.telefono.replace(/\D/g, '').replace(/^0/, '') : '';
-    sheet(`<div style="text-align:center;padding-top:20px"><div style="font-size:64px;animation:rise .5s">✅</div><h2>Venta #${v.numero} registrada</h2><div class="sub">${v.tipo === 'cashea' ? 'Cashea · inicial cobrada' : v.tipo === 'credito' ? `Crédito · saldo ${fmt(v.saldo, 'USD')} en cuentas por cobrar` : 'Contado'}</div></div>
+  recibo(v, pre) {
+    const cli = db().clientes.find(c => c.id === v.clienteId), tk = TK(), T = db().tasa.valor, $2 = n => '$' + (+n || 0).toFixed(2);
+    const tipoTx = { cashea: 'Cashea', credito: 'Crédito' }[v.tipo] || 'Contado';
+    const pagosTx = (v.pagos || []).map(x => `${x.metodo}: ${x.moneda === 'Bs' ? 'Bs ' + (+x.monto).toFixed(2) : $2(x.monto)}`).join('\n');
+    const garTx = (v.items || []).map(i => { const p = db().productos.find(p => p.id === (i.productoId || i.producto_id)); return p?.garantia_meses ? `• ${i.nombre}: ${p.garantia_meses} meses` : ''; }).filter(Boolean).join('\n');
+    const txtCli = `*${tk.nombre}*\nNota de venta #${v.numero}\n${cli ? 'Cliente: ' + cli.nombre + '\n' : ''}\n${(v.items || []).map(i => `${i.cant} x ${i.nombre}: ${$2(i.precio * i.cant)}`).join('\n')}\n\n*Total: ${$2(v.total)}* (Bs ${(v.total * T).toFixed(2)})${v.tipo === 'cashea' ? `\nInicial pagada: ${$2(v.inicial)}\nResto (${$2(v.financiado)}) en cuotas con Cashea` : v.tipo === 'credito' ? `\nInicial: ${$2(v.inicial)}\nSaldo a crédito: ${$2(v.saldo)}` : ''}${pagosTx ? '\n\nPagado con:\n' + pagosTx : ''}${garTx ? '\n\n🛡️ Garantía:\n' + garTx : ''}\n\n${tk.pie || '¡Gracias por su compra!'}`;
+    const hoy = db().ventas.filter(x => x.fecha === today() && !x.anulada), sH = hoy.reduce((a, x) => a + +x.total, 0), cH = hoy.reduce((a, x) => a + +x.inicial, 0);
+    const txtDue = `🔔 *Nueva venta #${v.numero}* · ${tipoTx}\n${v.vendedor ? 'Vendedor: ' + v.vendedor + '\n' : ''}Cliente: ${cli?.nombre || 'Mostrador'}${cli?.telefono ? ' · ' + cli.telefono : ''}\n\n${(v.items || []).map(i => `• ${i.cant} x ${i.nombre}: ${$2(i.precio * i.cant)}`).join('\n')}\n\n*Total: ${$2(v.total)}*\nCobrado hoy: ${$2(v.inicial)}${pagosTx ? '\n' + pagosTx : ''}${v.tipo === 'cashea' ? `\nCashea financia ${$2(v.financiado)} · comisión ${$2(v.comision)} · te deposita ${$2(v.netoCashea)}` : v.tipo === 'credito' ? `\nQueda por cobrar: ${$2(v.saldo)}` : ''}\n\n📊 *Hoy van ${hoy.length} ventas por ${$2(sH)}*\nCobrado en tienda hoy: ${$2(cH)}`;
+    const nCli = waNum(cli?.telefono), nDue = waNum(tk.dueno), mov = esMovil();
+    const url = (n, t) => mov ? `whatsapp://send?phone=${n}&text=${encodeURIComponent(t)}` : `https://wa.me/${n}?text=${encodeURIComponent(t)}`;
+    const cola = [nCli && ['cli', url(nCli, txtCli)], nDue && ['due', url(nDue, txtDue)]].filter(Boolean);
+    sheet(`<div style="text-align:center;padding-top:20px"><div style="font-size:64px;animation:rise .5s">✅</div><h2>Venta #${v.numero} registrada</h2><div class="sub">${v.tipo === 'cashea' ? 'Cashea · ' + (v.inicial > 0 ? 'inicial cobrada' : '100% financiado') : v.tipo === 'credito' ? `Crédito · saldo ${fmt(v.saldo, 'USD')} en cuentas por cobrar` : 'Contado'}</div></div>
     <div class="sum"><div class="tot"><span>Cobrado</span><span>${fmt(v.inicial, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares</span><b>${fmt(v.inicial, 'VES')}</b></div></div>
+    <div class="row2" style="margin-top:12px"><a class="btn ${nCli ? 'pri' : 'gh'}" id="waCli" ${nCli ? `href="${url(nCli, txtCli)}" target="_blank"` : 'style="opacity:.45"'}>💬 ${nCli ? 'Cliente' : 'Cliente sin teléfono'}</a><a class="btn ${nDue ? 'pri' : 'gh'}" id="waDue" ${nDue ? `href="${url(nDue, txtDue)}" target="_blank"` : 'style="opacity:.45"'}>👑 ${nDue ? 'Dueño' : 'Falta WhatsApp del dueño'}</a></div>
+    <div id="waMsg" style="text-align:center;font-size:13px;color:var(--mut);margin-top:8px">${cola.length ? 'Abriendo WhatsApp…' : 'Agrega el WhatsApp del dueño en Ajustes → Ticket de venta'}</div>
     <img id="tkImg" class="tkprev" alt="Ticket">
-    <button class="btn pri block" id="tkSh" disabled>Preparando ticket…</button>
-    <a class="btn gh block" style="margin-top:10px" target="_blank" href="https://wa.me/${tel}?text=${encodeURIComponent(txt)}">Enviar como texto por WhatsApp</a>
+    <button class="btn gh block" id="tkSh" disabled>Preparando ticket…</button>
     <button class="btn gh block" style="margin-top:10px" onclick="document.querySelector('.ov').remove()">Listo</button>`);
-    ticketBlob(v).then(b => { const im = document.querySelector('#tkImg'), bt = document.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); bt.disabled = false; bt.textContent = '🧾 Enviar ticket (imagen)'; bt.onclick = () => shareTicket(b, v.numero); });
+    const marca = k => { const b = document.querySelector(k === 'cli' ? '#waCli' : '#waDue'); if (b) { b.classList.remove('pri'); b.classList.add('gh'); b.innerHTML = '✓ ' + b.innerHTML.replace('✓ ', ''); } };
+    document.querySelectorAll('#waCli[href],#waDue[href]').forEach(a => a.addEventListener('click', () => marca(a.id === 'waCli' ? 'cli' : 'due')));
+    const abrir = (k, u, w) => { marca(k); if (w) w.location.href = u; else if (mov) location.href = u; else window.open(u, '_blank'); };
+    if (!cola.length) pre?.close();
+    else {
+      abrir(cola[0][0], cola[0][1], pre);
+      if (cola[1]) { const sig = () => { if (document.visibilityState === 'visible' || !mov) { document.removeEventListener('visibilitychange', sig); window.removeEventListener('focus', sig); setTimeout(() => { if (document.querySelector('#waDue')) abrir(cola[1][0], cola[1][1]); const m = document.querySelector('#waMsg'); if (m) m.textContent = 'Si no se abrió, toca 👑 Dueño'; }, 600); } };
+        setTimeout(() => { document.addEventListener('visibilitychange', sig); if (!mov) window.addEventListener('focus', sig); }, 800); }
+      setTimeout(() => { const m = document.querySelector('#waMsg'); if (m && m.textContent === 'Abriendo WhatsApp…') m.textContent = 'Si no se abrió, toca los botones'; }, 2500);
+    }
+    ticketBlob(v).then(b => { const im = document.querySelector('#tkImg'), bt = document.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); bt.disabled = false; bt.textContent = '🧾 Enviar ticket como imagen'; bt.onclick = () => shareTicket(b, v.numero); });
   },
-  tkRead() { const g = k => $('#tk' + k).value.trim(), t = { nombre: g('N') || 'Muebles La Pascua', rif: g('R'), telefono: g('T'), direccion: g('D'), instagram: g('I'), pie: g('P'), almacen: g('A') }; ['logo', 'bs', 'cliente', 'pagos', 'garantia', 'vendedor'].forEach(k => t[k] = $('#tk_' + k).checked); return t; },
+  tkRead() { const g = k => $('#tk' + k).value.trim(), t = { nombre: g('N') || 'Muebles La Pascua', rif: g('R'), telefono: g('T'), direccion: g('D'), instagram: g('I'), pie: g('P'), almacen: g('A'), dueno: g('W') }; ['logo', 'bs', 'cliente', 'pagos', 'garantia', 'vendedor'].forEach(k => t[k] = $('#tk_' + k).checked); return t; },
   async tkSave() { try { await store.setTicket(this.tkRead()); toast('Ticket guardado'); } catch (e) { toast('Error: ' + e.message); } },
   async tkPrev() {
     const p = db().productos[0], v = { numero: 1001, fecha: today(), clienteId: db().clientes[0]?.id, vendedor: db().usuario?.nombre, tipo: 'contado', total: p ? +p.precio : 250, inicial: p ? +p.precio : 250, items: [{ productoId: p?.id, nombre: p?.nombre || 'Nevera 14 pies', cant: 1, precio: p ? +p.precio : 250 }], pagos: [{ metodo: 'Pago móvil', moneda: '$', monto: p ? +p.precio : 250 }] };
@@ -709,7 +729,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=30'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=31'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
