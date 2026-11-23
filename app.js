@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=44';
+import { store, today, daysAgo } from './store.js?v=45';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -167,12 +167,12 @@ V.caja = () => {
 };
 
 V.clientes = () => {
-  const stats = id => { const vs = db().ventas.filter(v => v.clienteId === id); return { n: vs.length, t: vs.reduce((a, v) => a + v.total, 0), u: vs.at(-1)?.fecha }; };
+  const stats = id => { const vs = db().ventas.filter(v => v.clienteId === id); return { n: vs.length, t: vs.reduce((a, v) => a + v.total, 0), u: vs.at(-1)?.fecha, debe: vs.filter(v => v.tipo === 'credito').reduce((a, v) => a + (v.saldo > 0.009 ? +v.saldo : 0), 0) }; };
   const q = (window._qc || '').toLowerCase(), dig = q.replace(/\D/g, '');
   const cs = db().clientes.filter(c => !q || c.nombre.toLowerCase().includes(q) || (c.direccion || '').toLowerCase().includes(q) || (dig && ((c.cedula || '').replace(/\D/g, '').includes(dig) || (c.telefono || '').replace(/\D/g, '').includes(dig))));
   const wa = t => '58' + t.replace(/\D/g, '').replace(/^0/, '');
   return `<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap"><input class="in" id="qc" placeholder="🔎 Buscar por nombre, cédula, teléfono o dirección…" value="${esc(window._qc || '')}" oninput="window._qc=this.value;App.go('clientes',true)" style="flex:1;min-width:220px"><button class="btn pri" onclick="App.clienteForm()">+ Nuevo cliente</button></div>
-  <div class="tiles">${cs.map((c, i) => { const s = stats(c.id); return `<div class="tile" style="animation-delay:${i * 20}ms" onclick="App.clienteForm('${c.id}')"><div style="display:flex;justify-content:space-between;align-items:center"><div class="ic" style="font-size:20px;font-weight:700">${esc(c.nombre.trim()[0] || '?').toUpperCase()}</div>${c.telefono ? `<a class="tag t-ok" target="_blank" href="https://wa.me/${wa(c.telefono)}" onclick="event.stopPropagation()">WhatsApp</a>` : ''}</div><b>${esc(c.nombre)}</b><small>${esc(c.cedula || 'Sin cédula')} · ${esc(c.telefono || 'sin teléfono')}</small><small>📍 ${esc(c.direccion || 'Sin dirección')}</small>${(sd => sd > 0.009 ? `<span class="tag t-am" style="align-self:flex-start">Debe ${fmt(sd)}</span>` : '')(db().ventas.filter(v => v.clienteId === c.id && v.tipo === 'credito').reduce((s, v) => s + v.saldo, 0))}<div class="row"><span class="pr">${fmt(s.t)}</span><small>${s.n} compras${s.u ? ' · ' + fdate(s.u) : ''}</small></div></div>`; }).join('') || '<div class="empty">No hay clientes con ese filtro.</div>'}</div>`;
+  <div class="tiles">${cs.map((c, i) => { const s = stats(c.id); return `<div class="tile" style="animation-delay:${i * 20}ms" onclick="App.clienteForm('${c.id}')"><div style="display:flex;justify-content:space-between;align-items:center"><div class="ic" style="font-size:20px;font-weight:700">${esc(c.nombre.trim()[0] || '?').toUpperCase()}</div>${c.telefono ? `<a class="tag t-ok" target="_blank" href="https://wa.me/${wa(c.telefono)}" onclick="event.stopPropagation()">WhatsApp</a>` : ''}</div><b>${esc(c.nombre)}</b>${s.debe > 0.009 ? `<button class="btn pri" style="padding:7px 12px;margin:6px 0;font-size:13px" onclick="event.stopPropagation();App.verDeuda('${c.id}')">💰 Debe ${fmt(s.debe)} · Ver deuda</button>` : ''}<small>${esc(c.cedula || 'Sin cédula')} · ${esc(c.telefono || 'sin teléfono')}</small><small>📍 ${esc(c.direccion || 'Sin dirección')}</small>${(sd => sd > 0.009 ? `<span class="tag t-am" style="align-self:flex-start">Debe ${fmt(sd)}</span>` : '')(db().ventas.filter(v => v.clienteId === c.id && v.tipo === 'credito').reduce((s, v) => s + v.saldo, 0))}<div class="row"><span class="pr">${fmt(s.t)}</span><small>${s.n} compras${s.u ? ' · ' + fdate(s.u) : ''}</small></div></div>`; }).join('') || '<div class="empty">No hay clientes con ese filtro.</div>'}</div>`;
 };
 
 V.ajustes = () => `<div class="grid">
@@ -192,16 +192,16 @@ V.ajustes = () => `<div class="grid">
   <div class="card c6"><h3>Sesión</h3><p style="margin-bottom:12px">${esc(db().usuario.nombre)} · <span class="tag t-in">${rol()}</span></p><button class="btn gh" onclick="App.logout()">Cerrar sesión</button></div></div>`;
 
 // ---------- cuentas por cobrar ----------
-const CX = window.CX = { tab: 'credito', q: '', est: 'saldo', d: '', h: '' };
+const CX = window.CX = { tab: 'credito', q: '', est: 'saldo', d: '', h: '', cid: '' };
 const cxData = () => {
   const cli = id => db().clientes.find(c => c.id === id), q = CX.q.trim().toLowerCase();
-  const vs = db().ventas.filter(v => v.tipo === 'credito' && (CX.est === 'todas' || (CX.est === 'saldo' ? v.saldo > 0.009 : v.saldo <= 0.009)) && (!CX.d || v.fecha >= CX.d) && (!CX.h || v.fecha <= CX.h)
+  const vs = db().ventas.filter(v => v.tipo === 'credito' && (CX.est === 'todas' || (CX.est === 'saldo' ? v.saldo > 0.009 : v.saldo <= 0.009)) && (!CX.cid || v.clienteId === CX.cid) && (!CX.d || v.fecha >= CX.d) && (!CX.h || v.fecha <= CX.h)
     && (!q || (c => c && (c.nombre.toLowerCase().includes(q) || (c.cedula || '').toLowerCase().includes(q) || (c.telefono || '').includes(q)))(cli(v.clienteId))));
   const S = f => vs.reduce((s, v) => s + (+f(v) || 0), 0), dias = v => Math.round((new Date(today()) - new Date(v.fecha)) / 864e5);
   return { vs, cli, dias, total: S(v => v.total), ini: S(v => v.inicial), abo: S(v => v.abonado), saldo: S(v => v.saldo) };
 };
 V.cashea = () => {
-  const segm = `<div class="card c12" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="cur"><button class="${CX.tab === 'credito' ? 'on' : ''}" onclick="CX.tab='credito';App.go('cashea')">🤝 Clientes</button><button class="${CX.tab === 'cashea' ? 'on' : ''}" onclick="CX.tab='cashea';App.go('cashea')">💳 Cashea</button></div>${CX.tab === 'credito' ? `<input class="in" id="qx" placeholder="🔎 Buscar cliente…" value="${esc(CX.q)}" oninput="CX.q=this.value;App.go('cashea');setTimeout(()=>{const i=document.querySelector('#qx');i.focus();i.setSelectionRange(i.value.length,i.value.length)})" style="flex:1;min-width:180px;max-width:340px">` : ''}</div>`;
+  const segm = `<div class="card c12" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="cur"><button class="${CX.tab === 'credito' ? 'on' : ''}" onclick="CX.tab='credito';App.go('cashea')">🤝 Clientes</button><button class="${CX.tab === 'cashea' ? 'on' : ''}" onclick="CX.tab='cashea';App.go('cashea')">💳 Cashea</button></div>${CX.tab === 'credito' ? `<input class="in" id="qx" placeholder="🔎 Buscar cliente…" value="${esc(CX.q)}" oninput="CX.q=this.value;CX.cid='';App.go('cashea');setTimeout(()=>{const i=document.querySelector('#qx');i.focus();i.setSelectionRange(i.value.length,i.value.length)})" style="flex:1;min-width:180px;max-width:340px">` : ''}</div>`;
   if (CX.tab === 'cashea') return V._cashea().replace('<div class="grid">', '<div class="grid">' + segm);
   const cli = id => db().clientes.find(c => c.id === id), q = CX.q.trim().toLowerCase();
   const abiertas = db().ventas.filter(v => v.tipo === 'credito' && v.saldo > 0.009);
@@ -216,7 +216,7 @@ V.cashea = () => {
    <div class="fld"><label>Estado</label><select class="in" onchange="CX.est=this.value;App.go('cashea')">${[['saldo', 'Con saldo'], ['saldadas', 'Saldadas'], ['todas', 'Todas']].map(([k, t]) => `<option value="${k}" ${CX.est === k ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
    <div class="fld"><label>Venta desde</label><input class="in" type="date" value="${CX.d}" onchange="CX.d=this.value;App.go('cashea')"></div>
    <div class="fld"><label>Hasta</label><input class="in" type="date" value="${CX.h}" onchange="CX.h=this.value;App.go('cashea')"></div>
-   <div class="fld" style="display:flex;gap:8px;align-items:flex-end"><button class="btn pri" onclick="App.cxPDF()">🖨 PDF</button><button class="btn gh" onclick="App.cxExcel()">Excel</button>${CX.d || CX.h || CX.est !== 'saldo' || CX.q ? `<button class="pill" onclick="Object.assign(CX,{est:'saldo',d:'',h:'',q:''});App.go('cashea')">Limpiar</button>` : ''}</div></div>
+   <div class="fld" style="display:flex;gap:8px;align-items:flex-end"><button class="btn pri" onclick="App.cxPDF()">🖨 PDF</button><button class="btn gh" onclick="App.cxExcel()">Excel</button>${CX.d || CX.h || CX.est !== 'saldo' || CX.q || CX.cid ? `<button class="pill" onclick="Object.assign(CX,{est:'saldo',d:'',h:'',q:'',cid:''});App.go('cashea')">${CX.cid ? '✕ Ver todos los clientes' : 'Limpiar'}</button>` : ''}</div></div>
    <div class="cxb" style="font-size:13px;margin-top:6px"><span>${R.vs.length} cuentas</span><span>Total ${fmt(R.total)}</span><span>Inicial ${fmt(R.ini)}</span><span>Abonado ${fmt(R.abo)}</span><b style="color:var(--text)">Saldo ${fmt(R.saldo)}</b></div></div>
   ${Object.entries(grupos).sort((x, y) => y[1].reduce((s, v) => s + v.saldo, 0) - x[1].reduce((s, v) => s + v.saldo, 0)).map(([id, vs]) => { const c = cli(id) || { nombre: 'Sin cliente' }; return `<div class="card c6"><h3>${esc(c.nombre)} <span class="tag t-am">${fmt(vs.reduce((s, v) => s + v.saldo, 0))}</span></h3><small style="color:var(--mut)">${esc(c.cedula || '')} ${c.telefono ? '· ' + esc(c.telefono) : ''}</small>
    ${vs.map(v => `<div class="cx"><div><b>#${v.numero}</b> <small>${fdate(v.fecha)}</small><br><small>${esc((v.items || []).map(i => i.nombre).join(', '))}</small><div class="cxb"><span>Total ${fmt(v.total)}</span><span>Inicial ${fmt(v.inicial)}</span><span>Abonado ${fmt(v.abonado)}</span></div></div><div style="text-align:right"><div class="cxs">${fmt(v.saldo)}</div>${v.saldo > 0.009 ? `<button class="btn pri" style="padding:8px 14px;margin-top:6px" onclick="App.abonoForm('${v.id}')">Abonar</button>` : '<span class="tag t-ok">Saldada</span>'}<br><button class="pill" style="margin-top:6px" onclick="App.historial('${v.id}')">Historial</button></div></div>`).join('')}</div>`; }).join('') || `<div class="card c12"><div class="empty">${q || CX.d || CX.h || CX.est !== 'saldo' ? 'Ninguna cuenta coincide con el filtro.' : 'Ningún cliente te debe 🎉'}</div></div>`}</div>`;
@@ -393,6 +393,7 @@ const App = window.App = {
   nivel(id, n) { const it = cart.find(i => i.k === id); it.nivel = n; it.precio = n === 2 ? it.p2 : it.p1; render(); },
   async catAdd() { const n = $('#catIn').value.trim(); if (!n) return; if (CATS().some(c => c.toLowerCase() === n.toLowerCase())) return toast('Ya existe'); try { await store.setCategorias([...CATS(), n]); render(); toast('Categoría agregada'); } catch (e) { toast('Error: ' + e.message); } },
   async catDel(k) { const l = CATS(), c = l[k], n = db().productos.filter(p => p.categoria === c).length; if (!confirm(n ? `${n} productos usan "${c}". Seguirán con ella, pero no aparecerá para nuevos. ¿Quitar?` : `¿Quitar "${c}"?`)) return; try { await store.setCategorias(l.filter((_, i) => i !== k)); render(); } catch (e) { toast('Error: ' + e.message); } },
+  verDeuda(cid) { Object.assign(CX, { tab: 'credito', cid, q: '', est: 'saldo', d: '', h: '' }); this.go('cashea'); },
   abonoForm(id) {
     const v = db().ventas.find(x => x.id === id), c = db().clientes.find(x => x.id === v.clienteId), T = db().tasa.valor, METS = ['Pago móvil', 'Efectivo $', 'Efectivo Bs', 'Punto de venta', 'Zelle', 'Binance', 'Transferencia'];
     const o = sheet(`<h2>Registrar abono</h2><div class="sub">${esc(c?.nombre || '')} · nota #${v.numero}</div>
@@ -727,7 +728,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=44'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=45'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
