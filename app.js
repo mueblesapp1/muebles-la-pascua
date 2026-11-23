@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=32';
+import { store, today, daysAgo } from './store.js?v=33';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -545,7 +545,7 @@ const App = window.App = {
     calc();
     o.querySelector('#bOk').onclick = async e => {
       e.target.disabled = true; e.target.textContent = 'Guardando…';
-      const cSel = db().clientes.find(c => c.id === o.querySelector('#cCli').value), pre = !esMovil() && (waNum(cSel?.telefono) || waNum(TK().dueno)) ? window.open('', '_blank') : null;
+      const pre = null;
       try {
         if (st.tipo === 'credito' && !o.querySelector('#cCli').value) throw new Error('la venta a crédito necesita un cliente');
         let ps = cobrar > 0 ? pagos.filter(x => +x.monto > 0) : [];
@@ -567,26 +567,26 @@ const App = window.App = {
     const hoy = db().ventas.filter(x => x.fecha === today() && !x.anulada), sH = hoy.reduce((a, x) => a + +x.total, 0), cH = hoy.reduce((a, x) => a + +x.inicial, 0);
     const txtDue = `🔔 *Nueva venta #${v.numero}* · ${tipoTx}\n${v.vendedor ? 'Vendedor: ' + v.vendedor + '\n' : ''}Cliente: ${cli?.nombre || 'Mostrador'}${cli?.telefono ? ' · ' + cli.telefono : ''}\n\n${(v.items || []).map(i => `• ${i.cant} x ${i.nombre}: ${$2(i.precio * i.cant)}`).join('\n')}\n\n*Total: ${$2(v.total)}*\nCobrado hoy: ${$2(v.inicial)}${pagosTx ? '\n' + pagosTx : ''}${v.tipo === 'cashea' ? `\nCashea financia ${$2(v.financiado)} · comisión ${$2(v.comision)} · te deposita ${$2(v.netoCashea)}` : v.tipo === 'credito' ? `\nQueda por cobrar: ${$2(v.saldo)}` : ''}\n\n📊 *Hoy van ${hoy.length} ventas por ${$2(sH)}*\nCobrado en tienda hoy: ${$2(cH)}`;
     const nCli = waNum(cli?.telefono), nDue = waNum(tk.dueno), mov = esMovil();
-    const url = (n, t) => mov ? `whatsapp://send?phone=${n}&text=${encodeURIComponent(t)}` : `https://wa.me/${n}?text=${encodeURIComponent(t)}`;
-    const cola = [nCli && ['cli', url(nCli, txtCli)], nDue && ['due', url(nDue, txtDue)]].filter(Boolean);
+    const url = (n, t) => mov ? `whatsapp://send?phone=${n}${t ? '&text=' + encodeURIComponent(t) : ''}` : `https://wa.me/${n}${t ? '?text=' + encodeURIComponent(t) : ''}`;
     sheet(`<div style="text-align:center;padding-top:20px"><div style="font-size:64px;animation:rise .5s">✅</div><h2>Venta #${v.numero} registrada</h2><div class="sub">${v.tipo === 'cashea' ? 'Cashea · ' + (v.inicial > 0 ? 'inicial cobrada' : '100% financiado') : v.tipo === 'credito' ? `Crédito · saldo ${fmt(v.saldo, 'USD')} en cuentas por cobrar` : 'Contado'}</div></div>
     <div class="sum"><div class="tot"><span>Cobrado</span><span>${fmt(v.inicial, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares</span><b>${fmt(v.inicial, 'VES')}</b></div></div>
-    <div class="row2" style="margin-top:12px"><a class="btn ${nCli ? 'pri' : 'gh'}" id="waCli" ${nCli ? `href="${url(nCli, txtCli)}" target="_blank"` : 'style="opacity:.45"'}>💬 ${nCli ? 'Cliente' : 'Cliente sin teléfono'}</a><a class="btn ${nDue ? 'pri' : 'gh'}" id="waDue" ${nDue ? `href="${url(nDue, txtDue)}" target="_blank"` : 'style="opacity:.45"'}>👑 ${nDue ? 'Dueño' : 'Falta WhatsApp del dueño'}</a></div>
-    <div id="waMsg" style="text-align:center;font-size:13px;color:var(--mut);margin-top:8px">${cola.length ? 'Abriendo WhatsApp…' : 'Agrega el WhatsApp del dueño en Ajustes → Ticket de venta'}</div>
+    <button class="btn pri block" id="waCli" style="margin-top:12px" disabled>Preparando ticket…</button>
+    <button class="btn ${nDue ? 'gh' : 'gh'} block" id="waDue" style="margin-top:10px" disabled>Preparando ticket…</button>
+    <div id="waMsg" style="text-align:center;font-size:13px;color:var(--mut);margin-top:8px">Se copia la imagen del ticket y se abre el chat: mantén presionado el mensaje y toca <b>Pegar</b>.</div>
     <img id="tkImg" class="tkprev" alt="Ticket">
-    <button class="btn gh block" id="tkSh" disabled>Preparando ticket…</button>
+    <button class="btn gh block" id="tkSh" disabled>Compartir ticket…</button>
     <button class="btn gh block" style="margin-top:10px" onclick="document.querySelector('.ov').remove()">Listo</button>`);
-    const marca = k => { const b = document.querySelector(k === 'cli' ? '#waCli' : '#waDue'); if (b) { b.classList.remove('pri'); b.classList.add('gh'); b.innerHTML = '✓ ' + b.innerHTML.replace('✓ ', ''); } };
-    document.querySelectorAll('#waCli[href],#waDue[href]').forEach(a => a.addEventListener('click', () => marca(a.id === 'waCli' ? 'cli' : 'due')));
-    const abrir = (k, u, w) => { marca(k); if (w) w.location.href = u; else if (mov) location.href = u; else window.open(u, '_blank'); };
-    if (!cola.length) pre?.close();
-    else {
-      abrir(cola[0][0], cola[0][1], pre);
-      if (cola[1]) { const sig = () => { if (document.visibilityState === 'visible' || !mov) { document.removeEventListener('visibilitychange', sig); window.removeEventListener('focus', sig); setTimeout(() => { if (document.querySelector('#waDue')) abrir(cola[1][0], cola[1][1]); const m = document.querySelector('#waMsg'); if (m) m.textContent = 'Si no se abrió, toca 👑 Dueño'; }, 600); } };
-        setTimeout(() => { document.addEventListener('visibilitychange', sig); if (!mov) window.addEventListener('focus', sig); }, 800); }
-      setTimeout(() => { const m = document.querySelector('#waMsg'); if (m && m.textContent === 'Abriendo WhatsApp…') m.textContent = 'Si no se abrió, toca los botones'; }, 2500);
-    }
-    ticketBlob(v).then(b => { const im = document.querySelector('#tkImg'), bt = document.querySelector('#tkSh'); if (!im) return; im.src = URL.createObjectURL(b); bt.disabled = false; bt.textContent = '🧾 Enviar ticket como imagen'; bt.onclick = () => shareTicket(b, v.numero); });
+    ticketBlob(v).then(b => {
+      const im = document.querySelector('#tkImg'); if (!im) return; im.src = URL.createObjectURL(b);
+      const sh = document.querySelector('#tkSh'); sh.disabled = false; sh.textContent = '🧾 Compartir ticket (elegir contacto)'; sh.onclick = () => shareTicket(b, v.numero);
+      const prep = (id, n, txt, lbl, falta, sig) => { const bt = document.querySelector(id); if (!n) { bt.textContent = falta; bt.style.opacity = .45; bt.disabled = true; return; } bt.disabled = false; bt.textContent = lbl;
+        bt.onclick = async () => { let okc = false; try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]); okc = true; } catch (e) { } if (!okc) { await shareTicket(b, v.numero); return; }
+          bt.classList.remove('pri'); bt.classList.add('gh'); bt.textContent = '✓ ' + lbl; if (sig) { const s2 = document.querySelector(sig); if (s2 && !s2.disabled) { s2.classList.remove('gh'); s2.classList.add('pri'); } }
+          toast('Ticket copiado. En WhatsApp: mantén presionado y Pegar'); if (mov) location.href = url(n, txt); else window.open(url(n, txt), '_blank'); }; };
+      prep('#waCli', nCli, '', '1️⃣ Enviar ticket al cliente', 'Cliente sin teléfono', '#waDue');
+      prep('#waDue', nDue, txtDue, '2️⃣ Enviar ticket al dueño', 'Falta WhatsApp del dueño (Ajustes → Ticket)');
+      if (!nCli && nDue) { const d = document.querySelector('#waDue'); d.classList.remove('gh'); d.classList.add('pri'); }
+    });
   },
   tkRead() { const g = k => $('#tk' + k).value.trim(), t = { nombre: g('N') || 'Muebles La Pascua', rif: g('R'), telefono: g('T'), direccion: g('D'), instagram: g('I'), pie: g('P'), almacen: g('A'), dueno: g('W') }; ['logo', 'bs', 'cliente', 'pagos', 'garantia', 'vendedor'].forEach(k => t[k] = $('#tk_' + k).checked); return t; },
   async tkSave() { try { await store.setTicket(this.tkRead()); toast('Ticket guardado'); } catch (e) { toast('Error: ' + e.message); } },
@@ -729,7 +729,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=32'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=33'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
