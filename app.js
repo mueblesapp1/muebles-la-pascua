@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=52';
+import { store, today, daysAgo } from './store.js?v=53';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -343,7 +343,7 @@ V.reportes = () => {
 };
 
 // ---------- hojas (formularios) ----------
-function sheet(html) { const o = document.createElement('div'); o.className = 'ov'; o.innerHTML = `<div class="sheet">${html}</div>`; o.onclick = e => { if (e.target === o) o.remove(); }; document.body.appendChild(o); return o; }
+function sheet(html) { const o = document.createElement('div'); o.className = 'ov'; o.innerHTML = `<div class="sheet"><button type="button" class="shBack" onclick="this.closest('.ov').remove()">‹ Regresar</button>${html}</div>`; o.onclick = e => { if (e.target === o) o.remove(); }; document.body.appendChild(o); return o; }
 const closeSheet = () => document.querySelector('.ov')?.remove();
 
 const CATS = extra => [...new Set([...(db().config.categorias || []), ...(extra ? [extra] : [])])];
@@ -737,7 +737,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=52'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=53'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
