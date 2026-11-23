@@ -205,3 +205,5 @@ select.in option{background:#0C1322}
 
 .shBack{position:sticky;top:-24px;z-index:3;display:inline-flex;align-items:center;gap:4px;margin:-8px 0 12px -6px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#0B1322;color:#F29F05;font:600 15px/1 inherit;cursor:pointer}
 @media(max-width:900px){.shBack{top:-24px}}
+
+.noanim,.noanim *{animation:none!important}
