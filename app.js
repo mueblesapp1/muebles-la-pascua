@@ -1,9 +1,11 @@
-import { store, today, daysAgo } from './store.js?v=56';
+import { store, today, daysAgo } from './store.js?v=57';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 let CUR = localStorage.getItem('mlp_cur') || 'USD';
-let cart = [];
+let cart = []; let descT = null; // descuento al total {monto, auth}
+const subCart = () => cart.reduce((a, i) => a + i.precio * i.cant, 0), totCart = () => Math.max(0, +(subCart() - (descT?.monto || 0)).toFixed(2));
+const sinDT = () => { if (descT) { descT = null; toast('Se quitó el descuento al total: vuelve a aplicarlo'); } };
 const db = () => store.db;
 const rol = () => db().usuario?.rol;
 const esJefe = () => ['dueno', 'admin'].includes(rol());
@@ -120,14 +122,14 @@ V.tablero = () => {
 V.vender = () => {
   const q = (window._q || '').toLowerCase();
   const ps = db().productos.filter(p => !q || p.nombre.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q));
-  const tot = cart.reduce((a, i) => a + i.precio * i.cant, 0);
+  const tot = totCart();
   return `<div class="grid"><div class="c8 posL" style="grid-column:span 8">
   <input class="in" placeholder="🔎  Buscar producto…" value="${esc(window._q || '')}" oninput="window._q=this.value;App.part()" style="margin-bottom:14px;padding:15px 18px;font-size:16px" ${window._q ? 'autofocus' : ''}>
   <div class="tiles" id="res">${ps.map((p, i) => `<div class="tile" style="animation-delay:${i * 25}ms;${p.stock <= 0 && !p.varios ? 'opacity:.4' : ''}" onclick="App.addCart('${p.id}')"><div class="ic">${p.icono}</div><b>${esc(p.nombre)}</b><small>${p.varios ? 'Precio libre' : esc(p.categoria) + ' · ' + p.stock + ' disp.'}</small><div class="row"><span class="pr">${p.varios ? '$ —' : fmt(p.precio)}${+p.precio2 ? `<small style="display:block;font-size:11px;color:var(--mut);font-weight:400">P2 ${fmt(p.precio2)}</small>` : ''}</span><span class="tag t-am">+ Agregar</span></div></div>`).join('')}</div></div>
   <div class="card c4 posC${window._cartOpen ? ' open' : ''}" style="grid-column:span 4;align-self:start;position:sticky;top:20px"><div class="cbar" onclick="App.tgCart()"><span>🛒 ${cart.reduce((a, i) => a + i.cant, 0)} · <b>${fmt(tot, 'USD')}</b></span><span>${window._cartOpen ? 'Ocultar ▼' : 'Ver venta ▲'}</span></div><div class="cbody"><h3>Venta actual <span>${cart.length ? `<button class="pill del" onclick="App.vaciar()">Vaciar</button> ` : ''}${cart.length}</span></h3>
-  ${cart.length ? cart.map(i => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div><b style="font-size:14px">${esc(i.nombre)}</b><br><small style="color:var(--mut)">${i.lista > i.precio + 0.004 ? `<s>${fmt(i.lista)}</s> <b style="color:var(--amber2)">${fmt(i.precio)}</b> 🏷` : fmt(i.precio)}</small>${i.p2 ? ` <span class="pp"><button class="${i.nivel === 1 ? 'on' : ''}" onclick="App.nivel('${i.k}',1)">P1</button><button class="${i.nivel === 2 ? 'on' : ''}" onclick="App.nivel('${i.k}',2)">P2</button></span>` : ''}</div><div style="display:flex;gap:6px;align-items:center"><button class="pill" onclick="App.qty('${i.k}',-1)">−</button>${i.cant}<button class="pill" onclick="App.qty('${i.k}',1)">+</button><button class="pill del" title="Quitar" onclick="App.quitar('${i.k}')">🗑</button></div></div>`).join('') : '<div class="empty">Toca un producto para agregarlo</div>'}
-  <div class="sum"><div class="tot"><span>Total</span><span>${fmt(tot, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares</span><span>${fmt(tot, 'VES')}</span></div></div>
-  ${cart.some(i => !i.varios) ? (cart.some(i => i.lista > i.precio + 0.004) ? `<div style="display:flex;justify-content:space-between;align-items:center;margin:-4px 0 10px;font-size:13px"><span style="color:var(--amber2)">🏷 Descuento ${fmt(cart.reduce((s, i) => s + (i.lista > i.precio ? (i.lista - i.precio) * i.cant : 0), 0), 'USD')}</span><button class="pill del" onclick="App.quitarDesc()">Quitar descuento</button></div>` : `<button class="btn gh block" style="margin-bottom:10px" onclick="App.descuento()">🏷 Descuento / precio especial</button>`) : ''}
+  ${cart.length ? cart.map(i => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div><b style="font-size:14px">${esc(i.nombre)}</b><br><small style="color:var(--mut)">${i.lista > i.precio + 0.004 ? `<s>${fmt(i.lista)}</s> <b style="color:var(--amber2)">${fmt(i.precio)}</b> 🏷` : fmt(i.precio)}</small>${i.p2 ? ` <span class="pp"><button class="${i.nivel === 1 ? 'on' : ''}" onclick="App.nivel('${i.k}',1)">P1</button><button class="${i.nivel === 2 ? 'on' : ''}" onclick="App.nivel('${i.k}',2)">P2</button></span>` : ''}</div><div style="display:flex;gap:6px;align-items:center"><button class="pill" onclick="App.qty('${i.k}',-1)">−</button>${i.cant}<button class="pill" onclick="App.qty('${i.k}',1)">+</button>${i.varios ? '' : `<button class="pill${i.lista > i.precio + 0.004 ? ' on' : ''}" title="Descuento" onclick="App.descuento('${i.k}')">🏷</button>`}<button class="pill del" title="Quitar" onclick="App.quitar('${i.k}')">🗑</button></div></div>`).join('') : '<div class="empty">Toca un producto para agregarlo</div>'}
+  <div class="sum">${descT ? `<div><span style="color:var(--mut)">Subtotal</span><span>${fmt(subCart(), 'USD')}</span></div><div><span style="color:var(--amber2)">🏷 Descuento</span><span style="color:var(--amber2)">− ${fmt(descT.monto, 'USD')}</span></div>` : ''}<div class="tot"><span>Total</span><span>${fmt(tot, 'USD')}</span></div><div><span style="color:var(--mut)">En bolívares</span><span>${fmt(tot, 'VES')}</span></div></div>
+  ${cart.some(i => !i.varios) ? (descT ? `<div style="display:flex;justify-content:space-between;align-items:center;margin:-4px 0 10px;font-size:13px"><span style="color:var(--amber2)">🏷 Descuento al total − ${fmt(descT.monto, 'USD')}</span><button class="pill del" onclick="App.quitarDT()">Quitar</button></div>` : `<button class="btn gh block" style="margin-bottom:10px" onclick="App.descuento()">🏷 Descuento al total</button>`) : ''}
   <button class="btn pri block" ${cart.length ? '' : 'disabled style="opacity:.4"'} onclick="App.checkout()">Cobrar →</button></div></div></div>`;
 };
 
@@ -382,6 +384,7 @@ async function ticketBlob(v, t = TK()) {
     if (t.garantia) { const p = db().productos.find(p => p.id === (i.producto_id || i.productoId)); if (p?.garantiaMeses) { txt(`Garantía ${p.garantiaMeses} meses`, { z: 17, c: '#7b8594' }); y += 26; } }
   }
   hr();
+  { const sub = (v.items || []).reduce((s, i) => s + i.precio * i.cant, 0); if (sub > +v.total + 0.004 && !v.abono) { lr('Subtotal', '$' + sub.toFixed(2), { z: 20, c: '#5b6573' }); lr('Descuento', '-$' + (sub - v.total).toFixed(2), { z: 20, c: '#5b6573' }); } }
   lr('TOTAL', '$' + (+v.total).toFixed(2), { b: 1, z: 32, c: '#0F2A47' });
   if (t.bs) lr('En bolívares', 'Bs ' + (v.total * db().tasa.valor).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), { z: 20, c: '#5b6573' });
   if (t.bs) { txt(`Tasa BCV ${db().tasa.valor} Bs/$`, { z: 16, c: '#7b8594' }); y += 26; }
@@ -405,53 +408,41 @@ const App = window.App = {
   part() { const cur = document.querySelector('#res'); if (!cur) return render(); const t = document.createElement('div'); t.innerHTML = V[this.page](); const nu = t.querySelector('#res'); if (!nu) return render(); cur.classList.add('noanim'); cur.innerHTML = nu.innerHTML; },
   go(p, keep) { if (p !== 'cashea') CX.cid = ''; this.page = p; if (!keep) { window._q = ''; window._qc = ''; } location.hash = p; render(); },
   setCur(c) { CUR = c; localStorage.setItem('mlp_cur', c); render(); },
-  addCart(id) { const p = db().productos.find(p => p.id === id); if (p?.varios) return this.variosForm(p); if (!p || p.stock <= 0) return toast('Sin existencia'); const it = cart.find(i => i.productoId === id); if (it) { if (it.cant < p.stock) it.cant++; } else cart.push({ k: id, productoId: id, nombre: p.nombre, precio: +p.precio, p1: +p.precio, p2: +p.precio2 || 0, nivel: 1, cant: 1 }); render(); },
-  nivel(id, n) { const it = cart.find(i => i.k === id); it.nivel = n; it.precio = n === 2 ? it.p2 : it.p1; delete it.lista; render(); },
-  quitarDesc() { cart.forEach(i => { if (i.lista != null) { i.precio = i.lista; delete i.lista; } }); delete cart.auth; render(); },
-  descuento() {
-    const its = cart.filter(i => !i.varios), base = i => i.lista ?? i.precio, totL = its.reduce((s, i) => s + base(i) * i.cant, 0), r2 = n => Math.round(n * 100) / 100;
-    const st = { modo: 'total', tipo: 'pct', nuevos: {} };
-    const o = sheet(`<h2>🏷 Descuento / precio especial</h2><div class="sub">${rol() === 'dueno' ? 'Como dueño se aplica de una vez' : 'Necesita la autorización del dueño'}</div>
-    <div class="seg" id="dM" style="margin-bottom:12px"><button data-v="total" class="on">Al total</button><button data-v="item">Por artículo</button></div>
-    <div id="dB"></div><div class="sum" id="dR"></div><div id="dA"></div>`);
+  addCart(id) { sinDT(); const p = db().productos.find(p => p.id === id); if (p?.varios) return this.variosForm(p); if (!p || p.stock <= 0) return toast('Sin existencia'); const it = cart.find(i => i.productoId === id); if (it) { if (it.cant < p.stock) it.cant++; } else cart.push({ k: id, productoId: id, nombre: p.nombre, precio: +p.precio, p1: +p.precio, p2: +p.precio2 || 0, nivel: 1, cant: 1 }); render(); },
+  nivel(id, n) { const it = cart.find(i => i.k === id); it.nivel = n; it.precio = n === 2 ? it.p2 : it.p1; delete it.lista; delete it.auth; sinDT(); render(); },
+  quitarDT() { descT = null; render(); },
+  descuento(k) {
+    const r2 = n => Math.round(n * 100) / 100, it = k ? cart.find(i => i.k === k) : null;
+    if (k && !it) return;
+    const base = it ? r2((it.lista ?? it.precio) * it.cant) : r2(subCart());
+    const st = { tipo: 'pct' };
+    const o = sheet(`<h2>🏷 ${it ? 'Descuento a este producto' : 'Descuento al total'}</h2><div class="sub">${it ? esc(it.nombre) + ' · ' + it.cant + ' ud' + (it.cant > 1 ? 's' : '') : cart.length + ' productos'} · ${rol() === 'dueno' ? 'como dueño se aplica de una vez' : 'necesita autorización del dueño'}</div>
+    <div class="seg" id="dT" style="margin-bottom:10px"><button data-v="pct" class="on">%</button><button data-v="fin">Total final $</button></div>
+    <div class="fld"><input class="in" id="dV" type="number" inputmode="decimal" step="0.01" placeholder="Ej. 10"></div>
+    <div class="sum" id="dR"></div><div id="dA"></div>${it && it.lista > it.precio + 0.004 ? `<button class="btn gh block" style="margin-top:10px" id="dQ">Quitar descuento de este producto</button>` : ''}`);
     const q = s => o.querySelector(s);
-    const calc = () => { // devuelve precios unitarios nuevos por k
-      const nv = {};
-      if (st.modo === 'item') { its.forEach(i => { const v = +(st.nuevos[i.k] ?? ''); nv[i.k] = v > 0 ? r2(v) : base(i); }); return nv; }
-      const x = +(q('#dV')?.value || 0); let fin = totL;
-      if (x > 0) fin = st.tipo === 'pct' ? totL * (1 - Math.min(x, 100) / 100) : st.tipo === 'usd' ? totL - x : x;
-      fin = Math.max(0, r2(fin)); const f = totL ? fin / totL : 1;
-      its.forEach(i => { nv[i.k] = r2(base(i) * f); });
-      let dif = r2(fin - its.reduce((s, i) => s + nv[i.k] * i.cant, 0)); const uno = its.find(i => i.cant === 1);
-      if (Math.abs(dif) >= 0.01 && uno) nv[uno.k] = r2(nv[uno.k] + dif);
-      return nv;
-    };
-    const resumen = () => { const nv = calc(), tn = its.reduce((s, i) => s + nv[i.k] * i.cant, 0), d = totL - tn;
-      q('#dR').innerHTML = `<div><span style="color:var(--mut)">Total de lista</span><span>${fmt(totL, 'USD')}</span></div><div><span style="color:var(--mut)">Descuento</span><span style="color:var(--amber2)">− ${fmt(d, 'USD')} (${totL ? (d / totL * 100).toFixed(1) : 0}%)</span></div><div class="tot"><span>Total final</span><span>${fmt(tn, 'USD')}</span></div>`;
-      return { nv, tn, d }; };
-    const cuerpo = () => {
-      q('#dB').innerHTML = st.modo === 'total' ? `<div class="seg" id="dT" style="margin-bottom:10px">${[['pct', '%'], ['usd', '$ menos'], ['fin', 'Total final $']].map(([v, l]) => `<button data-v="${v}" class="${st.tipo === v ? 'on' : ''}">${l}</button>`).join('')}</div><div class="fld"><input class="in" id="dV" type="number" inputmode="decimal" step="0.01" placeholder="${st.tipo === 'pct' ? 'Ej. 10' : '0.00'}"></div>`
-        : its.map(i => `<div class="fld"><label>${esc(i.nombre)} · ${i.cant} ud${i.cant > 1 ? 's' : ''} · lista ${fmt(base(i))}</label><input class="in" data-k="${i.k}" type="number" inputmode="decimal" step="0.01" placeholder="Precio final c/u $" value="${st.nuevos[i.k] ?? ''}"></div>`).join('');
-      q('#dT')?.querySelectorAll('button').forEach(b => b.onclick = () => { st.tipo = b.dataset.v; cuerpo(); });
-      q('#dV') && (q('#dV').oninput = resumen);
-      o.querySelectorAll('#dB [data-k]').forEach(inp => inp.oninput = () => { st.nuevos[inp.dataset.k] = inp.value; resumen(); });
-      resumen();
-    };
-    q('#dM').querySelectorAll('button').forEach(b => b.onclick = () => { st.modo = b.dataset.v; q('#dM').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); cuerpo(); });
-    const aplicar = (nv, auth) => { its.forEach(i => { const b = base(i); if (nv[i.k] < b - 0.004) { i.lista = b; i.precio = nv[i.k]; } else { i.precio = b; delete i.lista; } }); if (auth) cart.auth = auth; else delete cart.auth; closeSheet(); render(); toast('Descuento aplicado 🏷'); };
-    const paquete = nv => ({ items: its.map(i => ({ producto_id: i.productoId, nombre: i.nombre, cant: i.cant, lista: base(i), precio: nv[i.k] })), total_lista: r2(totL), total_nuevo: r2(its.reduce((s, i) => s + nv[i.k] * i.cant, 0)) });
-    const valida = () => { const r = resumen(); if (!(r.d > 0.004)) { toast('Escribe el descuento o el precio'); return null; } if (its.some(i => r.nv[i.k] < 0)) { toast('Precio inválido'); return null; } return r; };
+    const calc = () => { const x = +(q('#dV').value || 0); let fin = base; if (x > 0) fin = st.tipo === 'pct' ? base * (1 - Math.min(x, 100) / 100) : x; fin = Math.max(0, Math.min(base, r2(fin))); return { fin, d: r2(base - fin) }; };
+    const resumen = () => { const { fin, d } = calc(); q('#dR').innerHTML = `<div><span style="color:var(--mut)">${it ? 'Total de lista' : 'Subtotal'}</span><span>${fmt(base, 'USD')}</span></div><div><span style="color:var(--mut)">Descuento</span><span style="color:var(--amber2)">− ${fmt(d, 'USD')} (${base ? (d / base * 100).toFixed(1) : 0}%)</span></div><div class="tot"><span>Total final</span><span>${fmt(fin, 'USD')}</span></div>${it && it.cant > 1 ? `<div><span style="color:var(--mut)">Precio c/u</span><span>${fmt(r2(fin / it.cant), 'USD')}</span></div>` : ''}`; return { fin, d }; };
+    q('#dT').querySelectorAll('button').forEach(b => b.onclick = () => { st.tipo = b.dataset.v; q('#dT').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); q('#dV').placeholder = st.tipo === 'pct' ? 'Ej. 10' : '0.00'; q('#dV').value = ''; resumen(); });
+    q('#dV').oninput = resumen;
+    q('#dQ') && (q('#dQ').onclick = () => { it.precio = it.lista; delete it.lista; delete it.auth; sinDT(); closeSheet(); render(); });
+    const valida = () => { const r = resumen(); if (!(r.d > 0.004)) { toast('Escribe el % o el total final'); return null; } return r; };
+    const nuevoPU = r => r2(r.fin / it.cant);
+    const paquete = r => it
+      ? { items: [{ producto_id: it.productoId, nombre: it.nombre, cant: it.cant, lista: it.lista ?? it.precio, precio: nuevoPU(r) }], total_lista: base, total_nuevo: r2(nuevoPU(r) * it.cant) }
+      : { items: cart.map(i => ({ producto_id: i.productoId, nombre: i.nombre, cant: i.cant, lista: i.precio, precio: i.precio, ctx: 1 })), descuento_total: r.d, total_lista: base, total_nuevo: r.fin };
+    const aplicar = (r, auth) => { if (it) { const l = it.lista ?? it.precio; it.lista = l; it.precio = nuevoPU(r); if (auth) it.auth = auth; else delete it.auth; descT = null; } else descT = { monto: r.d, auth }; closeSheet(); render(); toast('Descuento aplicado 🏷'); };
     if (rol() === 'dueno') {
       q('#dA').innerHTML = `<button class="btn pri block" id="dOk">Aplicar descuento</button>`;
-      q('#dOk').onclick = () => { const r = valida(); if (r) aplicar(r.nv); };
+      q('#dOk').onclick = () => { const r = valida(); if (r) aplicar(r); };
     } else {
       q('#dA').innerHTML = `<button class="btn pri block" id="dRem">📲 Pedir autorización al dueño</button><div class="sub" style="text-align:center;margin:14px 0 8px">o si el dueño está aquí</div><div class="row2"><input class="in" id="dPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="PIN del dueño" autocomplete="off"><button class="btn gh" id="dPinOk">🔑 Autorizar</button></div>`;
       q('#dPinOk').onclick = async () => { const r = valida(); if (!r) return; const pin = q('#dPin').value.trim(); if (!pin) return toast('Escribe el PIN'); q('#dPinOk').disabled = true;
-        try { const id = await store.autorizarPin(pin, paquete(r.nv)); if (!id) { q('#dPin').value = ''; toast('PIN incorrecto'); } else aplicar(r.nv, id); } catch (e) { toast(e.message); } q('#dPinOk') && (q('#dPinOk').disabled = false); };
+        try { const id = await store.autorizarPin(pin, paquete(r)); if (!id) { q('#dPin').value = ''; toast('PIN incorrecto'); } else aplicar(r, id); } catch (e) { toast(e.message); } q('#dPinOk') && (q('#dPinOk').disabled = false); };
       q('#dRem').onclick = async () => { const r = valida(); if (!r) return; q('#dRem').disabled = true;
-        try { const id = await store.solicitarAuth(paquete(r.nv)); App.esperarAuth(id, () => aplicar(r.nv, id), r.tn); } catch (e) { toast(e.message); q('#dRem').disabled = false; } };
+        try { const id = await store.solicitarAuth(paquete(r)); App.esperarAuth(id, () => aplicar(r, id), r.fin); } catch (e) { toast(e.message); q('#dRem').disabled = false; } };
     }
-    cuerpo();
+    resumen(); setTimeout(() => q('#dV')?.focus(), 300);
   },
   esperarAuth(id, ok, tn) {
     const w = sheet(`<div style="text-align:center;padding-top:30px"><div style="font-size:56px;animation:rise 1s infinite alternate">📲</div><h2>Esperando al dueño…</h2><div class="sub">Le llegó la solicitud a su app. Total final ${fmt(tn, 'USD')}.<br>Esta pantalla se actualiza sola.</div><button class="btn gh block" id="wX">Cancelar solicitud</button></div>`);
@@ -466,7 +457,7 @@ const App = window.App = {
     const d = (+a.total_lista || 0) - (+a.total_nuevo || 0);
     const o = sheet(`<div data-auth="${a.id}"></div><h2>🏷 Solicitud de descuento</h2><div class="sub">${esc(a.solicitante || 'Un usuario')} pide autorización · ${new Date(a.creado).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</div>
     <div class="sum" style="margin-top:0">${(a.items || []).map(i => `<div><span>${i.cant} × ${esc(i.nombre)}</span><span>${+i.precio < +i.lista - 0.004 ? `<s style="color:var(--mut)">${fmt(i.lista)}</s> ` : ''}<b>${fmt(i.precio)}</b></span></div>`).join('')}
-    <div><span style="color:var(--mut)">Total de lista</span><span>${fmt(a.total_lista, 'USD')}</span></div><div><span style="color:var(--mut)">Descuento</span><span style="color:var(--amber2)">− ${fmt(d, 'USD')} (${+a.total_lista ? (d / a.total_lista * 100).toFixed(1) : 0}%)</span></div><div class="tot"><span>Total final</span><span>${fmt(a.total_nuevo, 'USD')}</span></div></div>
+    <div><span style="color:var(--mut)">${+a.descuento_total > 0 ? 'Subtotal' : 'Total de lista'}</span><span>${fmt(a.total_lista, 'USD')}</span></div><div><span style="color:var(--mut)">${+a.descuento_total > 0 ? 'Descuento al total' : 'Descuento'}</span><span style="color:var(--amber2)">− ${fmt(d, 'USD')} (${+a.total_lista ? (d / a.total_lista * 100).toFixed(1) : 0}%)</span></div><div class="tot"><span>Total final</span><span>${fmt(a.total_nuevo, 'USD')}</span></div></div>
     <div class="row2"><button class="btn gh" id="sNo" style="color:var(--bad)">❌ Rechazar</button><button class="btn pri" id="sSi">✅ Autorizar</button></div>`);
     const res = async si => { try { await store.resolverAuth(a.id, si); o.remove(); toast(si ? 'Autorizado ✅' : 'Rechazado'); } catch (e) { o.remove(); toast(e.message); } };
     o.querySelector('#sSi').onclick = () => res(true); o.querySelector('#sNo').onclick = () => res(false);
@@ -569,14 +560,14 @@ const App = window.App = {
     const usd = () => { const m = +o.querySelector('#xP').value || 0; return o.querySelector('#xM').value === 'Bs' ? m / T : m; };
     const msg = () => { const u = usd(); o.querySelector('#xMsg').textContent = u ? `${fmt(u, 'USD')} · ${fmt(u, 'VES')} c/u` : ''; };
     o.querySelector('#xP').oninput = msg; o.querySelector('#xM').onchange = msg; setTimeout(() => o.querySelector('#xP').focus(), 50);
-    o.querySelector('#xOk').onclick = () => { const u = +usd().toFixed(2), c = Math.max(1, +o.querySelector('#xC').value || 1), d = o.querySelector('#xD').value.trim() || 'Producto Varios'; if (!(u > 0)) return toast('Escribe el precio'); cart.push({ k: 'v' + Date.now(), productoId: p.id, nombre: d, precio: u, p1: u, p2: 0, nivel: 1, cant: c, varios: true }); closeSheet(); render(); };
+    o.querySelector('#xOk').onclick = () => { const u = +usd().toFixed(2), c = Math.max(1, +o.querySelector('#xC').value || 1), d = o.querySelector('#xD').value.trim() || 'Producto Varios'; if (!(u > 0)) return toast('Escribe el precio'); sinDT(); cart.push({ k: 'v' + Date.now(), productoId: p.id, nombre: d, precio: u, p1: u, p2: 0, nivel: 1, cant: c, varios: true }); closeSheet(); render(); };
   },
-  quitar(id) { cart = cart.filter(i => i.k !== id); render(); toast('Artículo quitado'); },
+  quitar(id) { cart = cart.filter(i => i.k !== id); sinDT(); render(); toast('Artículo quitado'); },
   tgCart() { window._cartOpen = !window._cartOpen; render(); },
-  vaciar() { if (!confirm('¿Vaciar toda la venta actual?')) return; cart = []; render(); },
-  qty(id, d) { const it = cart.find(i => i.k === id); it.cant += d; if (it.cant <= 0) cart = cart.filter(i => i !== it); render(); },
+  vaciar() { if (!confirm('¿Vaciar toda la venta actual?')) return; cart = []; descT = null; render(); },
+  qty(id, d) { sinDT(); const it = cart.find(i => i.k === id); it.cant += d; if (it.cant <= 0) cart = cart.filter(i => i !== it); render(); },
   checkout() {
-    const tot = cart.reduce((a, i) => a + i.precio * i.cant, 0);
+    const tot = totCart();
     const st = { tipo: 'contado', pct: 60 }; const METS = ['Pago móvil', 'Efectivo $', 'Efectivo Bs', 'Punto de venta', 'Zelle', 'Binance', 'Transferencia']; let pagos = [{ metodo: 'Pago móvil', moneda: 'Bs', monto: '' }]; let cobrar = 0;
     const o = sheet(`<h2>Cobrar</h2><div class="sub">${cart.length} productos · ${fmt(tot, 'USD')}</div>
     <div class="fld"><label>Cliente</label><input class="in" id="cBus" placeholder="🔎 Buscar por nombre, cédula o teléfono…" autocomplete="off"><input type="hidden" id="cCli"><div id="cRes" style="margin-top:8px"></div></div>
@@ -642,8 +633,8 @@ const App = window.App = {
         const pag = ps.reduce((a, x) => a + usdDe(x), 0);
         if (pag + 0.01 < cobrar) throw new Error(`faltan ${fmt(cobrar - pag, 'USD')} por cobrar`);
         const lista = ps.map(x => ({ metodo: x.metodo, moneda: x.moneda, monto: +(+x.monto).toFixed(2), usd: +usdDe(x).toFixed(2) }));
-        const v = await store.addVenta({ auth: cart.auth, clienteId: o.querySelector('#cCli').value || null, items: cart, total: tot, tipo: st.tipo, inicialPct: st.tipo === 'cashea' ? st.pct : 100, inicial: st.tipo === 'credito' ? +cobrar.toFixed(2) : null, metodo: [...new Set(lista.map(x => x.metodo))].join(' + ') || (st.tipo === 'cashea' ? 'Cashea 100% financiado' : 'Crédito'), pagos: lista });
-        cart = []; closeSheet(); render(); this.recibo(v, pre);
+        const v = await store.addVenta({ auths: [...new Set([...cart.map(i => i.auth), descT?.auth].filter(Boolean))], descTotal: descT?.monto || 0, clienteId: o.querySelector('#cCli').value || null, items: cart, total: tot, tipo: st.tipo, inicialPct: st.tipo === 'cashea' ? st.pct : 100, inicial: st.tipo === 'credito' ? +cobrar.toFixed(2) : null, metodo: [...new Set(lista.map(x => x.metodo))].join(' + ') || (st.tipo === 'cashea' ? 'Cashea 100% financiado' : 'Crédito'), pagos: lista });
+        cart = []; descT = null; closeSheet(); render(); this.recibo(v, pre);
       } catch (err) { pre?.close(); toast('Error: ' + err.message); e.target.disabled = false; e.target.textContent = 'Confirmar venta'; }
     };
   },
@@ -814,7 +805,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=56'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=57'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
@@ -851,7 +842,7 @@ const App = window.App = {
     const txt = modo === 'todo' ? 'Se borran ventas, abonos, compras, proveedores, gastos, clientes y todo el inventario. Quedan solo la configuración y los usuarios.' : 'Se borran ventas, abonos, compras, proveedores y gastos. Se quedan el inventario (con sus existencias actuales), los clientes y los usuarios.';
     if (!confirm(txt + '\n\n¿Seguro? No se puede deshacer.')) return;
     const w = prompt('Para confirmar escribe BORRAR'); if ((w || '').trim().toUpperCase() !== 'BORRAR') return toast('Cancelado');
-    try { await store.limpiar(modo); cart = []; render(); toast('Datos borrados ✅'); } catch (e) { toast('Error: ' + e.message); }
+    try { await store.limpiar(modo); cart = []; descT = null; render(); toast('Datos borrados ✅'); } catch (e) { toast('Error: ' + e.message); }
   },
   async borrarDemo() { if (!confirm('¿Borrar todos los datos de demostración? Tus datos reales se quedan.')) return; await store.borrarDemo(); render(); toast('Demo borrada'); },
   async repPDF() {

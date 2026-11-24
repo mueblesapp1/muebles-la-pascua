@@ -48,7 +48,7 @@ export const store = {
     return db;
   },
   async addVenta(v) {
-    const r = ok(await sb.rpc('registrar_venta', { p: { cliente_id: v.clienteId, tipo: v.tipo, metodo: v.metodo, total: v.total, inicial_pct: v.inicialPct, inicial: v.inicial ?? null, pagos: v.pagos || null, autorizacion_id: v.auth || null, items: v.items.map(i => ({ producto_id: i.productoId, nombre: i.nombre, cant: i.cant, precio: i.precio, lista: i.varios ? i.precio : (i.lista ?? i.precio) })) } }));
+    const r = ok(await sb.rpc('registrar_venta', { p: { cliente_id: v.clienteId, tipo: v.tipo, metodo: v.metodo, total: v.total, inicial_pct: v.inicialPct, inicial: v.inicial ?? null, pagos: v.pagos || null, autorizaciones: v.auths || [], descuento_total: v.descTotal || 0, items: v.items.map(i => ({ producto_id: i.productoId, nombre: i.nombre, cant: i.cant, precio: i.precio, lista: i.varios ? i.precio : (i.lista ?? i.precio) })) } }));
     await this.load(); return db.ventas.find(x => x.id === r.id) || r;
   },
   async anular(id, motivo) { ok(await sb.rpc('anular_venta', { vid: id, motivo })); await this.load(); },
