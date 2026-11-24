@@ -1,4 +1,4 @@
-import { store, today, daysAgo } from './store.js?v=57';
+import { store, today, daysAgo } from './store.js?v=58';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -417,13 +417,13 @@ const App = window.App = {
     const base = it ? r2((it.lista ?? it.precio) * it.cant) : r2(subCart());
     const st = { tipo: 'pct' };
     const o = sheet(`<h2>🏷 ${it ? 'Descuento a este producto' : 'Descuento al total'}</h2><div class="sub">${it ? esc(it.nombre) + ' · ' + it.cant + ' ud' + (it.cant > 1 ? 's' : '') : cart.length + ' productos'} · ${rol() === 'dueno' ? 'como dueño se aplica de una vez' : 'necesita autorización del dueño'}</div>
-    <div class="seg" id="dT" style="margin-bottom:10px"><button data-v="pct" class="on">%</button><button data-v="fin">Total final $</button></div>
+    ${it ? `<div class="seg" id="dT" style="margin-bottom:10px"><button data-v="pct" class="on">%</button><button data-v="fin">Total final $</button></div>` : `<div class="sub" style="margin-bottom:6px">Porcentaje de descuento (%)</div>`}
     <div class="fld"><input class="in" id="dV" type="number" inputmode="decimal" step="0.01" placeholder="Ej. 10"></div>
     <div class="sum" id="dR"></div><div id="dA"></div>${it && it.lista > it.precio + 0.004 ? `<button class="btn gh block" style="margin-top:10px" id="dQ">Quitar descuento de este producto</button>` : ''}`);
     const q = s => o.querySelector(s);
     const calc = () => { const x = +(q('#dV').value || 0); let fin = base; if (x > 0) fin = st.tipo === 'pct' ? base * (1 - Math.min(x, 100) / 100) : x; fin = Math.max(0, Math.min(base, r2(fin))); return { fin, d: r2(base - fin) }; };
     const resumen = () => { const { fin, d } = calc(); q('#dR').innerHTML = `<div><span style="color:var(--mut)">${it ? 'Total de lista' : 'Subtotal'}</span><span>${fmt(base, 'USD')}</span></div><div><span style="color:var(--mut)">Descuento</span><span style="color:var(--amber2)">− ${fmt(d, 'USD')} (${base ? (d / base * 100).toFixed(1) : 0}%)</span></div><div class="tot"><span>Total final</span><span>${fmt(fin, 'USD')}</span></div>${it && it.cant > 1 ? `<div><span style="color:var(--mut)">Precio c/u</span><span>${fmt(r2(fin / it.cant), 'USD')}</span></div>` : ''}`; return { fin, d }; };
-    q('#dT').querySelectorAll('button').forEach(b => b.onclick = () => { st.tipo = b.dataset.v; q('#dT').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); q('#dV').placeholder = st.tipo === 'pct' ? 'Ej. 10' : '0.00'; q('#dV').value = ''; resumen(); });
+    q('#dT') && q('#dT').querySelectorAll('button').forEach(b => b.onclick = () => { st.tipo = b.dataset.v; q('#dT').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); q('#dV').placeholder = st.tipo === 'pct' ? 'Ej. 10' : '0.00'; q('#dV').value = ''; resumen(); });
     q('#dV').oninput = resumen;
     q('#dQ') && (q('#dQ').onclick = () => { it.precio = it.lista; delete it.lista; delete it.auth; sinDT(); closeSheet(); render(); });
     const valida = () => { const r = resumen(); if (!(r.d > 0.004)) { toast('Escribe el % o el total final'); return null; } return r; };
@@ -805,7 +805,7 @@ const App = window.App = {
   },
   async liquidar(id) { await store.liquidar(id); toast('Liquidación marcada como recibida'); render(); },
   async setTasa() { const v = +$('#tasaIn').value; if (v > 0) { await store.setTasa(v); render(); toast('Tasa actualizada'); } },
-  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=57'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
+  async setCom() { const v = +$('#comIn').value; const { sb } = await import('./store.js?v=58'); await sb.from('config').update({ comision_cashea: v }).eq('id', 1); await store.load(); render(); toast('Comisión guardada'); },
   async bcv(force) {
     if (!esJefe()) return; if (!force && db().tasa.fecha === today()) return;
     try { const r = await (await fetch('https://ve.dolarapi.com/v1/dolares/oficial')).json(); if (r.promedio) { await store.setTasa(+r.promedio.toFixed(2), 'BCV'); render(); if (force) toast('Tasa BCV: ' + r.promedio.toFixed(2)); } } catch { if (force) toast('No pude traer la tasa, colócala manual'); }
