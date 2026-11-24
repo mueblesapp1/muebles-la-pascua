@@ -48,7 +48,7 @@ export const store = {
     return db;
   },
   async addVenta(v) {
-    const r = ok(await sb.rpc('registrar_venta', { p: { cliente_id: v.clienteId, tipo: v.tipo, metodo: v.metodo, total: v.total, inicial_pct: v.inicialPct, inicial: v.inicial ?? null, pagos: v.pagos || null, items: v.items.map(i => ({ producto_id: i.productoId, nombre: i.nombre, cant: i.cant, precio: i.precio })) } }));
+    const r = ok(await sb.rpc('registrar_venta', { p: { cliente_id: v.clienteId, tipo: v.tipo, metodo: v.metodo, total: v.total, inicial_pct: v.inicialPct, inicial: v.inicial ?? null, pagos: v.pagos || null, autorizacion_id: v.auth || null, items: v.items.map(i => ({ producto_id: i.productoId, nombre: i.nombre, cant: i.cant, precio: i.precio, lista: i.varios ? i.precio : (i.lista ?? i.precio) })) } }));
     await this.load(); return db.ventas.find(x => x.id === r.id) || r;
   },
   async anular(id, motivo) { ok(await sb.rpc('anular_venta', { vid: id, motivo })); await this.load(); },
@@ -75,6 +75,15 @@ export const store = {
   async borrarUsuario(id) { ok(await sb.rpc('borrar_usuario', { p_uid: id })); await this.load(); },
   async cambiarClave(id, pass) { ok(await sb.rpc('cambiar_clave', { p_uid: id, p_pass: pass })); },
   async setPerfil(id, ch) { ok(await sb.from('perfiles').update(ch).eq('id', id)); await this.load(); },
+  async solicitarAuth(p) { return ok(await sb.rpc('solicitar_autorizacion', { p })); },
+  async autorizarPin(pin, p) { return ok(await sb.rpc('autorizar_con_pin', { p_pin: pin, p })); },
+  async resolverAuth(id, si) { ok(await sb.rpc('resolver_autorizacion', { p_id: id, p_ok: si })); },
+  async cancelarAuth(id) { ok(await sb.rpc('cancelar_autorizacion', { p_id: id })); },
+  async getAuth(id) { return ok(await sb.from('autorizaciones').select('*').eq('id', id).maybeSingle()); },
+  async pendientesAuth() { const d = new Date(Date.now() - 2 * 3600e3).toISOString(); return ok(await sb.from('autorizaciones').select('*').eq('estado', 'pendiente').gte('creado', d).order('creado')); },
+  async fijarPin(pin) { ok(await sb.rpc('fijar_pin', { p_pin: pin })); },
+  async tienePin() { return ok(await sb.rpc('tiene_pin')); },
+  liveAuth(cb) { sb.channel('autoriz').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'autorizaciones' }, x => cb(x.new)).subscribe(); },
   async limpiar(modo) { ok(await sb.rpc('limpiar_datos', { p_modo: modo })); await this.load(); },
   async borrarDemo() { ok(await sb.from('ventas').delete().eq('demo', true)); ok(await sb.from('gastos').delete().eq('demo', true)); ok(await sb.from('productos').delete().eq('demo', true)); ok(await sb.from('clientes').delete().eq('demo', true)); await this.load(); },
   live(cb) { sb.channel('cambios').on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'abonos' }, cb).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'venta_items' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'compras' }, cb).on('postgres_changes', { event: '*', schema: 'public', table: 'pagos_proveedor' }, cb).subscribe(); },
